@@ -1,0 +1,34 @@
+# Internal documents, not published with repo
+PROJECT_SUMMARY.md
+AGENTS.md
+
+# dev-docs/ — internal working documents
+dev-docs/
+
+# Dev-doc style numbered files (0000-9999)
+[0-9][0-9][0-9][0-9]-*.md
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor files
+*.swp
+*.swo
+*~
+.vscode/
+.idea/
+
+# Runtime artifacts
+*.bak
+*.bak.*
+*.log
+
+# Third-party scripts downloaded at runtime
+ecs.sh
+quick_start.sh
+ip.sh
+
+# .env files (contain secrets)
+.env
+*.env
