@@ -1,4 +1,4 @@
-# New Server Setup
+# First Login Security
 
 > First 30 minutes on a fresh VPS: assess, harden, and verify before you deploy anything.
 

@@ -464,13 +464,13 @@ If you can't trust any data on the compromised server:
 #    - Kernel hardening
 #    - Password policy
 #    - sudo audit
-# 4. Install Docker (Ch.03)
-# 5. Apply Docker UFW fix (Ch.03)
+# 4. Install Docker (Ch.06)
+# 5. Apply Docker UFW fix (Ch.06)
 # 6. Deploy applications from known-good compose files
 # 7. Restore ONLY database dumps (not full volumes) from backup
 #    - Database dumps are safer than volume copies (less likely to contain malware)
-# 8. Set up monitoring (Ch.07) before going live
-# 9. Set up backups (Ch.06) with backup-kit
+# 8. Set up monitoring (Ch.04) before going live
+# 9. Set up backups (Ch.05) with backup-kit
 ```
 
 **This is the recommended approach for root-level compromises.** You can never be 100% certain you've removed all backdoors from a compromised system. A clean rebuild eliminates uncertainty.
@@ -525,7 +525,7 @@ docker compose up -d
 
 # Update all running containers (if using Watchtower):
 # Watchtower checks daily and updates automatically
-# (Ch.03 — but only for non-critical services)
+# (Ch.06 — but only for non-critical services)
 
 # Check for known vulnerabilities:
 apt list --upgradable
@@ -577,8 +577,8 @@ DETECTED BY: [monitoring alert / user report / provider notification]
 [ ] Fresh server provisioned (if rebuild)
 [ ] Baseline applied (secure-vps a1 + Ch.02 security baseline)
 [ ] Data restored from backup (if applicable)
-[ ] Monitoring deployed (Ch.07)
-[ ] Backups configured (Ch.06, backup-kit)
+[ ] Monitoring deployed (Ch.04)
+[ ] Backups configured (Ch.05, backup-kit)
 
 === Phase 5: Post-Incident ===
 [ ] Root cause documented

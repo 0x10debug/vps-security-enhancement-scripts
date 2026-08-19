@@ -1,6 +1,6 @@
-# Docker Operations
+# Container Security
 
-> Install, configure, and tame Docker on a VPS — including the UFW bypass fix that most tutorials miss.
+> Docker on a VPS from a security angle — UFW bypass fix, isolation, resource limits, and the pitfalls most tutorials miss.
 
 ## Overview
 
