@@ -33,7 +33,7 @@ The 7-layer architecture (L0 → L6) guides the iteration plan. Each layer maps 
 
 | Layer | Scope | Status |
 |---|---|---|
-| L0 | Compliance audit (CIS Benchmark, STIG) | Planned (Phase 2) |
+| L0 | Compliance audit (CIS Benchmark, STIG) | CIS audit script added (Phase 2); STIG planned |
 | L1 | Container & Kubernetes security | Planned (Phase 3) |
 | L2 | Cloud platform CIS baselines (AWS/GCP/Azure) | Planned (Phase 4) |
 | L3 | Data security (database hardening, big-data SSL/audit) | Planned (Phase 5) |
@@ -65,7 +65,7 @@ See [`dev-docs/0015`](https://github.com/0x10debug/vps-security-enhancement-scri
 
 ## Handbook (Included)
 
-8 scenario-driven chapters organized by security layer. Each follows "Problem → Investigate → Fix → Verify":
+9 scenario-driven chapters organized by security layer. Each follows "Problem → Investigate → Fix → Verify":
 
 | Chapter | Topic | Security Angle |
 |---|---|---|
@@ -77,6 +77,7 @@ See [`dev-docs/0015`](https://github.com/0x10debug/vps-security-enhancement-scri
 | [06](handbook/06-container-security.md) | Container Security | Docker UFW bypass, isolation, resource limits |
 | [07](handbook/07-network-security-diagnostics.md) | Network Security Diagnostics | Firewall, TLS, IP quality troubleshooting |
 | [08](handbook/08-resource-security.md) | Resource Security | Resource exhaustion defense, crypto performance |
+| [09](handbook/09-cis-stig-compliance.md) | CIS & STIG Compliance | Automated compliance audit against CIS Benchmarks |
 
 ## Cheatsheets
 
