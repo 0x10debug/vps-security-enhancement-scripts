@@ -1,6 +1,6 @@
-# VPS Troubleshooting Decision Tree
+# VPS Security Troubleshooting Decision Tree
 
-> Flowchart-style quick reference for common VPS problems. Print on A4, pin to wall. Follow the branches top-down; each `→` is the next diagnostic step.
+> Flowchart-style quick reference for common VPS security problems. Print on A4, pin to wall. Follow the branches top-down; each `→` is the next diagnostic step.
 
 ---
 

@@ -1,6 +1,6 @@
-# Docker & Docker Compose Cheatsheet
+# Container Security Commands Cheatsheet
 
-> One-page quick reference for container ops on VPS. Print on A4.
+> One-page quick reference for container security on VPS. Print on A4.
 
 ---
 
