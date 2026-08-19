@@ -1,9 +1,9 @@
 #!/bin/bash
 # ════════════════════════════════════════════════════════════
-#  secure-vps — 服务器安全加固与运维工具箱
+#  secure-vps — VPS Security Enhancement Scripts
 #  适用系统: Ubuntu / Debian / CentOS / AlmaLinux / Rocky
 #  运行身份: root
-#  项目主页: https://github.com/0x10debug/vps-secure-script (MIT)
+#  项目主页: https://github.com/0x10debug/vps-security-enhancement-scripts (MIT)
 # ════════════════════════════════════════════════════════════
 
 # ── [base] 颜色与全局标识 ────────────────────────────────────
@@ -12,8 +12,8 @@ C_OK='\033[0;32m'
 C_WARN='\033[0;33m'
 C_INFO='\033[0;34m'
 C_RST='\033[0m'
-APP_VER="v1.0.0"
-UPSTREAM_URL="https://raw.githubusercontent.com/0x10debug/vps-secure-script/main/vps_secure.sh"
+APP_VER="v2.0.0"
+UPSTREAM_URL="https://raw.githubusercontent.com/0x10debug/vps-security-enhancement-scripts/main/vps_security_enhance.sh"
 
 # ── [base] 前置环境探测 ──────────────────────────────────────
 if [ "$EUID" -ne 0 ]; then
@@ -152,7 +152,9 @@ gauge() {
     if   [ "$pct" -lt 50 ]; then tone=$C_OK
     elif [ "$pct" -lt 80 ]; then tone=$C_WARN
     else tone=$C_FAIL; fi
-    local width=20 fill=$(( pct * width / 100 )) blank=$(( width - fill ))
+    local width=20
+    local fill=$(( pct * width / 100 ))
+    local blank=$(( width - fill ))
     printf "  %-10s ${C_INFO}│" "$name"
     for ((i=0; i<fill; i++)); do printf "${tone}▮${C_RST}"; done
     for ((i=0; i<blank; i++)); do printf "▯"; done
@@ -1911,29 +1913,81 @@ page_fw() {
     done
 }
 
-page_f2b() {
+page_intrusion() {
     while true; do
         clear
         echo -e "${C_OK}═══════════════════${C_RST}"
-        echo -e "${C_OK}     Fail2Ban      ${C_RST}"
+        echo -e "${C_OK}     入侵封禁       ${C_RST}"
         echo -e "${C_OK}═══════════════════${C_RST}"
-        echo -e "  ${C_WARN}1.${C_RST} 部署防护"
-        echo -e "  ${C_WARN}2.${C_RST} 查看状态与封禁名单"
-        echo -e "  ${C_WARN}3.${C_RST} 查看拦截日志"
-        echo -e "  ${C_WARN}4.${C_RST} 重启服务"
+        echo -e "  ${C_WARN}1.${C_RST} 🚫 Fail2Ban 部署防护"
+        echo -e "  ${C_WARN}2.${C_RST} 📋 Fail2Ban 状态与封禁名单"
+        echo -e "  ${C_WARN}3.${C_RST} 📜 Fail2Ban 拦截日志"
+        echo -e "  ${C_WARN}4.${C_RST} 🔄 重启 Fail2Ban"
+        echo -e "  ${C_WARN}5.${C_RST} 🛡 CrowdSec 安装 (现代替代)"
+        echo -e "  ${C_WARN}6.${C_RST} 📋 CrowdSec 状态"
         echo -e "  ${C_WARN}0.${C_RST} 返回"
         echo
         local pick
-        read -r -p "❯ 选择 [0-4]: " pick
+        read -r -p "❯ 选择 [0-6]: " pick
         case $pick in
             1) f2b_deploy ;;
             2) f2b_report ;;
             3) f2b_log_tail ;;
             4) systemctl restart fail2ban; echo -e "${C_OK}已重启。${C_RST}"; wait_key ;;
+            5) crowdsec_deploy ;;
+            6) crowdsec_status ;;
             0) break ;;
             *) echo -e "${C_FAIL}无效输入${C_RST}"; sleep 1 ;;
         esac
     done
+}
+
+crowdsec_deploy() {
+    echo -e "${C_WARN}>>> CrowdSec 部署 <<<${C_RST}"
+    if command -v cscli >/dev/null 2>&1; then
+        echo -e "${C_WARN}CrowdSec 已安装。${C_RST}"
+        wait_key; return
+    fi
+    echo -e "${C_INFO}CrowdSec = 行为分析 + 众包威胁情报 + 多层 bouncer${C_RST}"
+    echo -e "${C_INFO}资源开销: ~85MB RAM (Fail2ban ~22MB, 可接受)${C_RST}"
+    if ! ask_yes "安装 CrowdSec？(可与 Fail2ban 共存)"; then return; fi
+    curl -fsSL https://raw.githubusercontent.com/crowdsecurity/crowdsec/master/scripts/install.sh \
+        -o /tmp/crowdsec-install.sh 2>/dev/null || {
+        echo -e "${C_FAIL}下载安装脚本失败, 请检查网络。${C_RST}"; wait_key; return; }
+    bash /tmp/crowdsec-install.sh
+    rm -f /tmp/crowdsec-install.sh
+    if command -v cscli >/dev/null 2>&1; then
+        echo -e "${C_OK}CrowdSec 已安装。${C_RST}"
+        echo -e "${C_INFO}常用命令:${C_RST}"
+        echo -e "  ${C_WARN}cscli metrics${C_RST}     — 查看检测指标"
+        echo -e "  ${C_WARN}cscli decisions list${C_RST} — 查看封禁列表"
+        echo -e "  ${C_WARN}cscli alerts list${C_RST}    — 查看告警"
+        echo -e "${C_INFO}建议安装 bouncer (如 iptables-bouncer):${C_RST}"
+        echo -e "  ${C_WARN}cscli bouncers install -n iptables${C_RST}"
+    else
+        echo -e "${C_FAIL}CrowdSec 安装失败, 请手动排查。${C_RST}"
+    fi
+    wait_key
+}
+
+crowdsec_status() {
+    echo -e "${C_WARN}>>> CrowdSec 状态 <<<${C_RST}"
+    if ! command -v cscli >/dev/null 2>&1; then
+        echo -e "${C_FAIL}CrowdSec 未安装。${C_RST}"
+        wait_key; return
+    fi
+    echo -e "${C_INFO}── 服务状态 ──${C_RST}"
+    systemctl is-active crowdsec 2>/dev/null && echo -e "${C_OK}crowdsec 运行中${C_RST}" || echo -e "${C_FAIL}crowdsec 未运行${C_RST}"
+    echo ""
+    echo -e "${C_INFO}── 检测指标 ──${C_RST}"
+    cscli metrics 2>/dev/null || echo -e "${C_WARN}无法获取指标${C_RST}"
+    echo ""
+    echo -e "${C_INFO}── 封禁决策 ──${C_RST}"
+    cscli decisions list 2>/dev/null || echo -e "${C_WARN}无封禁决策${C_RST}"
+    echo ""
+    echo -e "${C_INFO}── Bouncer ──${C_RST}"
+    cscli bouncers list 2>/dev/null || echo -e "${C_WARN}无 bouncer${C_RST}"
+    wait_key
 }
 
 page_tuning() {
@@ -2015,39 +2069,262 @@ page_toolbox() {
     done
 }
 
-page_shield() {
+page_shield_baseline() {
     while true; do
         clear
         echo -e "${C_OK}═══════════════════${C_RST}"
-        echo -e "${C_OK}     纵深防御       ${C_RST}"
+        echo -e "${C_OK}     基线体检       ${C_RST}"
         echo -e "${C_OK}═══════════════════${C_RST}"
-        echo -e "  ${C_WARN}1.${C_RST} 🩺 基线体检 (只读)"
-        echo -e "  ${C_WARN}2.${C_RST} 🧱 内核参数加固"
-        echo -e "  ${C_WARN}3.${C_RST} ♻  撤销内核加固"
-        echo -e "  ${C_WARN}4.${C_RST} 🔑 密码强度策略"
-        echo -e "  ${C_WARN}5.${C_RST} 📝 sudo 审计"
-        echo -e "  ${C_WARN}6.${C_RST} 🔄 自动安全更新"
-        echo -e "  ${C_WARN}7.${C_RST} 🕵 Rkhunter 防御"
-        echo -e "  ${C_WARN}8.${C_RST} 🧬 AIDE 完整性"
-        echo -e "  ${C_WARN}9.${C_RST} 📡 auditd 审计"
-        echo -e "  ${C_WARN}10.${C_RST} 🔌 收缩攻击面"
-        echo -e "  ${C_WARN}11.${C_RST} 🔍 Lynis 审计"
+        echo -e "  ${C_WARN}1.${C_RST} 🩺 基线体检 (只读, 不改系统)"
         echo -e "  ${C_WARN}0.${C_RST} 返回"
         echo
         local pick
-        read -r -p "❯ 选择 [0-11]: " pick
+        read -r -p "❯ 选择 [0-1]: " pick
         case $pick in
             1) baseline_scan ;;
-            2) kernel_arm ;;
-            3) kernel_disarm ;;
-            4) passwd_quality ;;
-            5) sudo_guard ;;
-            6) auto_updates_on ;;
-            7) rootkit_watch ;;
-            8) page_integrity ;;
-            9) auditd_install ;;
-            10) services_trim ;;
-            11) lynis_audit ;;
+            0) break ;;
+            *) echo -e "${C_FAIL}无效输入${C_RST}"; sleep 1 ;;
+        esac
+    done
+}
+
+page_shield_kernel() {
+    while true; do
+        clear
+        echo -e "${C_OK}═══════════════════${C_RST}"
+        echo -e "${C_OK}     内核加固       ${C_RST}"
+        echo -e "${C_OK}═══════════════════${C_RST}"
+        echo -e "  ${C_WARN}1.${C_RST} 🧱 内核参数加固"
+        echo -e "  ${C_WARN}2.${C_RST} ♻  撤销内核加固"
+        echo -e "  ${C_WARN}0.${C_RST} 返回"
+        echo
+        local pick
+        read -r -p "❯ 选择 [0-2]: " pick
+        case $pick in
+            1) kernel_arm ;;
+            2) kernel_disarm ;;
+            0) break ;;
+            *) echo -e "${C_FAIL}无效输入${C_RST}"; sleep 1 ;;
+        esac
+    done
+}
+
+page_shield_audit() {
+    while true; do
+        clear
+        echo -e "${C_OK}═══════════════════${C_RST}"
+        echo -e "${C_OK}   审计与完整性    ${C_RST}"
+        echo -e "${C_OK}═══════════════════${C_RST}"
+        echo -e "  ${C_WARN}1.${C_RST} 🕵 Rkhunter 防御"
+        echo -e "  ${C_WARN}2.${C_RST} 🧬 AIDE 完整性"
+        echo -e "  ${C_WARN}3.${C_RST} 📡 auditd 审计"
+        echo -e "  ${C_WARN}4.${C_RST} 🔌 收缩攻击面"
+        echo -e "  ${C_WARN}5.${C_RST} 🔍 Lynis 审计"
+        echo -e "  ${C_WARN}0.${C_RST} 返回"
+        echo
+        local pick
+        read -r -p "❯ 选择 [0-5]: " pick
+        case $pick in
+            1) rootkit_watch ;;
+            2) page_integrity ;;
+            3) auditd_install ;;
+            4) services_trim ;;
+            5) lynis_audit ;;
+            0) break ;;
+            *) echo -e "${C_FAIL}无效输入${C_RST}"; sleep 1 ;;
+        esac
+    done
+}
+
+page_shield_access() {
+    while true; do
+        clear
+        echo -e "${C_OK}═══════════════════${C_RST}"
+        echo -e "${C_OK}   密码与权限      ${C_RST}"
+        echo -e "${C_OK}═══════════════════${C_RST}"
+        echo -e "  ${C_WARN}1.${C_RST} 🔑 密码强度策略"
+        echo -e "  ${C_WARN}2.${C_RST} 📝 sudo 审计"
+        echo -e "  ${C_WARN}3.${C_RST} 🔄 自动安全更新"
+        echo -e "  ${C_WARN}4.${C_RST} 👥 新建 sudo 用户"
+        echo -e "  ${C_WARN}5.${C_RST} 👥 查看普通用户"
+        echo -e "  ${C_WARN}6.${C_RST} 👥 删除普通用户"
+        echo -e "  ${C_WARN}0.${C_RST} 返回"
+        echo
+        local pick
+        read -r -p "❯ 选择 [0-6]: " pick
+        case $pick in
+            1) passwd_quality ;;
+            2) sudo_guard ;;
+            3) auto_updates_on ;;
+            4) user_add_admin ;;
+            5) user_roster ;;
+            6) user_drop ;;
+            0) break ;;
+            *) echo -e "${C_FAIL}无效输入${C_RST}"; sleep 1 ;;
+        esac
+    done
+}
+
+page_emergency() {
+    while true; do
+        clear
+        echo -e "${C_OK}═══════════════════${C_RST}"
+        echo -e "${C_OK}     应急检查       ${C_RST}"
+        echo -e "${C_OK}═══════════════════${C_RST}"
+        echo -e "  ${C_WARN}1.${C_RST} 🚨 快速安全体检 (基线扫描)"
+        echo -e "  ${C_WARN}2.${C_RST} 👥 最近登录记录"
+        echo -e "  ${C_WARN}3.${C_RST} ⏰ 可疑定时任务"
+        echo -e "  ${C_WARN}4.${C_RST} 📖 参阅应急手册 (handbook/03-incident-response.md)"
+        echo -e "  ${C_WARN}0.${C_RST} 返回"
+        echo
+        local pick
+        read -r -p "❯ 选择 [0-4]: " pick
+        case $pick in
+            1) baseline_scan ;;
+            2) emergency_logins ;;
+            3) emergency_cron ;;
+            4) echo -e "${C_INFO}请参阅 handbook/03-incident-response.md${C_RST}"; wait_key ;;
+            0) break ;;
+            *) echo -e "${C_FAIL}无效输入${C_RST}"; sleep 1 ;;
+        esac
+    done
+}
+
+emergency_logins() {
+    echo -e "${C_WARN}>>> 最近登录记录 <<<${C_RST}"
+    echo -e "${C_INFO}── 成功登录 (最近 20 条) ──${C_RST}"
+    last -20 2>/dev/null || echo -e "${C_WARN}last 命令不可用${C_RST}"
+    echo ""
+    echo -e "${C_INFO}── 失败登录 (最近 20 条) ──${C_RST}"
+    lastb -20 2>/dev/null || echo -e "${C_WARN}lastb 命令不可用 (需 root)${C_RST}"
+    echo ""
+    echo -e "${C_INFO}── 当前登录用户 ──${C_RST}"
+    who 2>/dev/null
+    wait_key
+}
+
+emergency_cron() {
+    echo -e "${C_WARN}>>> 可疑定时任务排查 <<<${C_RST}"
+    echo -e "${C_INFO}── root crontab ──${C_RST}"
+    crontab -l 2>/dev/null || echo -e "${C_WARN}无 root crontab${C_RST}"
+    echo ""
+    echo -e "${C_INFO}── /etc/cron.d/ ──${C_RST}"
+    ls -la /etc/cron.d/ 2>/dev/null
+    echo ""
+    echo -e "${C_INFO}── /etc/crontab ──${C_RST}"
+    cat /etc/crontab 2>/dev/null || echo -e "${C_WARN}无 /etc/crontab${C_RST}"
+    echo ""
+    echo -e "${C_INFO}── 所有用户 crontab ──${C_RST}"
+    for user in $(cut -d: -f1 /etc/passwd 2>/dev/null); do
+        local cron
+        cron=$(crontab -u "$user" -l 2>/dev/null) || continue
+        [ -n "$cron" ] && echo -e "${C_WARN}$user:${C_RST}" && echo "$cron"
+    done
+    echo ""
+    echo -e "${C_WARN}检查项: 未知脚本路径、可疑下载命令、非标准时段任务${C_RST}"
+    wait_key
+}
+
+page_ops_docker() {
+    while true; do
+        clear
+        echo -e "${C_OK}═══════════════════${C_RST}"
+        echo -e "${C_OK}     容器安全       ${C_RST}"
+        echo -e "${C_OK}═══════════════════${C_RST}"
+        if command -v docker >/dev/null 2>&1; then
+            echo -e "状态: ${C_OK}已安装${C_RST}"
+        else
+            echo -e "状态: ${C_FAIL}未安装${C_RST}"
+        fi
+        echo
+        echo -e "  ${C_WARN}1.${C_RST} 🐳 Docker 引擎 (安装/配置/UFW 修复)"
+        echo -e "  ${C_WARN}2.${C_RST} 📦 Portainer (Web 管理面板)"
+        echo -e "  ${C_WARN}3.${C_RST} 🔄 Watchtower (自动更新)"
+        echo -e "  ${C_WARN}4.${C_RST} 🖥 1Panel (服务器面板)"
+        echo -e "  ${C_WARN}0.${C_RST} 返回"
+        echo
+        local pick
+        read -r -p "❯ 选择 [0-4]: " pick
+        case $pick in
+            1) page_docker ;;
+            2) app_portainer_on ;;
+            3) app_watch_on ;;
+            4) page_1panel ;;
+            0) break ;;
+            *) echo -e "${C_FAIL}无效输入${C_RST}"; sleep 1 ;;
+        esac
+    done
+}
+
+page_ops_monitor() {
+    while true; do
+        clear
+        echo -e "${C_OK}═══════════════════${C_RST}"
+        echo -e "${C_OK}     安全监控       ${C_RST}"
+        echo -e "${C_OK}═══════════════════${C_RST}"
+        echo -e "  ${C_WARN}1.${C_RST} 📊 Uptime Kuma (拨测监控)"
+        echo -e "  ${C_WARN}2.${C_RST} 📊 实时资源仪表"
+        echo -e "  ${C_WARN}0.${C_RST} 返回"
+        echo
+        local pick
+        read -r -p "❯ 选择 [0-2]: " pick
+        case $pick in
+            1) app_kuma_on ;;
+            2) sys_pulse ;;
+            0) break ;;
+            *) echo -e "${C_FAIL}无效输入${C_RST}"; sleep 1 ;;
+        esac
+    done
+}
+
+page_ops_network() {
+    while true; do
+        clear
+        echo -e "${C_OK}═══════════════════${C_RST}"
+        echo -e "${C_OK}     网络诊断       ${C_RST}"
+        echo -e "${C_OK}═══════════════════${C_RST}"
+        echo -e "  ${C_WARN}1.${C_RST} 🛰 回程路由 (NextTrace)"
+        echo -e "  ${C_WARN}2.${C_RST} 🛡 IP 质量评分"
+        echo -e "  ${C_WARN}3.${C_RST} 📺 流媒体解锁"
+        echo -e "  ${C_WARN}0.${C_RST} 返回"
+        echo
+        local pick
+        read -r -p "❯ 选择 [0-3]: " pick
+        case $pick in
+            1) bench_route ;;
+            2) bench_ip_score ;;
+            3) bench_stream ;;
+            0) break ;;
+            *) echo -e "${C_FAIL}无效输入${C_RST}"; sleep 1 ;;
+        esac
+    done
+}
+
+page_emergency_perf() {
+    while true; do
+        clear
+        echo -e "${C_OK}═══════════════════${C_RST}"
+        echo -e "${C_OK}   性能与资源      ${C_RST}"
+        echo -e "${C_OK}═══════════════════${C_RST}"
+        echo -e "  ${C_WARN}1.${C_RST} 🧠 开启 BBR"
+        echo -e "  ${C_WARN}2.${C_RST} 💾 新建 Swap"
+        echo -e "  ${C_WARN}3.${C_RST} 💾 删除 Swap"
+        echo -e "  ${C_WARN}4.${C_RST} 📊 实时资源仪表"
+        echo -e "  ${C_WARN}5.${C_RST} 🥇 YABS (CPU/磁盘)"
+        echo -e "  ${C_WARN}6.${C_RST} 🌍 带宽测速 (bench.sh)"
+        echo -e "  ${C_WARN}7.${C_RST} 🏅 融合怪综合评测"
+        echo -e "  ${C_WARN}0.${C_RST} 返回"
+        echo
+        local pick
+        read -r -p "❯ 选择 [0-7]: " pick
+        case $pick in
+            1) net_bbr_enable ;;
+            2) mem_swap_build ;;
+            3) mem_swap_drop ;;
+            4) sys_pulse ;;
+            5) bench_cpu_disk ;;
+            6) bench_speed ;;
+            7) bench_omni ;;
             0) break ;;
             *) echo -e "${C_FAIL}无效输入${C_RST}"; sleep 1 ;;
         esac
@@ -2302,28 +2579,34 @@ home_page() {
         if [ -x /usr/local/bin/secure-vps ]; then
             hint=" ${C_WARN}[任意处输入 secure-vps 可唤起]${C_RST}"
         fi
-        echo -e "${C_OK}   ❰ secure-vps ❱  服务器安全加固与运维工具箱  ${C_WARN}${APP_VER}${C_RST}"
+        echo -e "${C_OK}   ❰ secure-vps ❱  VPS Security Enhancement Scripts  ${C_WARN}${APP_VER}${C_RST}"
         echo -e "${C_OK}══════════════════════════════════════${C_RST}"
         echo -e "${C_INFO}主机: ${PRETTY_NAME:-$DISTRO}${C_RST}$hint"
         echo ""
         echo -e "${C_INFO}▎A · 快速通道${C_RST}"
-        echo -e "  ${C_FAIL}a1${C_RST} 🛡  全量初始化 (更新+防火墙+BBR+Swap+Fail2Ban+内核)"
+        echo -e "  ${C_FAIL}a1${C_RST} 🛡  全量安全初始化 (更新+防火墙+BBR+Swap+Fail2Ban+内核)"
         echo -e "      ${C_WARN}(新机专用: 内核优化、基础防御、虚拟内存一步到位)${C_RST}"
         echo ""
-        echo -e "${C_INFO}▎B · 安全${C_RST}"
+        echo -e "${C_INFO}▎B · 访问安全${C_RST}"
         echo -e "  ${C_WARN}b1${C_RST} 🔐 SSH 与登录"
         echo -e "  ${C_WARN}b2${C_RST} 🧱 防火墙"
-        echo -e "  ${C_WARN}b3${C_RST} 🚫 Fail2Ban"
-        echo -e "  ${C_WARN}b4${C_RST} 🛡 纵深防御 (体检/内核/审计/完整性)"
+        echo -e "  ${C_WARN}b3${C_RST} 🚫 入侵封禁 (Fail2Ban / CrowdSec)"
         echo ""
-        echo -e "${C_INFO}▎C · 运维${C_RST}"
-        echo -e "  ${C_WARN}c1${C_RST} 🧰 工具箱 (档案/时区/DNS/清理)"
-        echo -e "  ${C_WARN}c2${C_RST} 🧠 性能 (BBR/Swap)"
-        echo -e "  ${C_WARN}c3${C_RST} 👥 用户"
+        echo -e "${C_INFO}▎C · 纵深防御${C_RST}"
+        echo -e "  ${C_WARN}c1${C_RST} 🩺 基线体检 (只读)"
+        echo -e "  ${C_WARN}c2${C_RST} 🧱 内核加固"
+        echo -e "  ${C_WARN}c3${C_RST} 🔍 审计与完整性 (auditd/AIDE/Rkhunter/Lynis)"
+        echo -e "  ${C_WARN}c4${C_RST} 🔑 密码与权限 (密码策略/sudo/用户管理)"
         echo ""
-        echo -e "${C_INFO}▎D · 扩展与测量${C_RST}"
-        echo -e "  ${C_WARN}d1${C_RST} 📦 应用部署 (Docker/容器/1Panel)"
-        echo -e "  ${C_WARN}d2${C_RST} 📊 监控评测 (跑分/路由/IP)"
+        echo -e "${C_INFO}▎D · 安全运维${C_RST}"
+        echo -e "  ${C_WARN}d1${C_RST} 🐳 容器安全 (Docker/Portainer/Watchtower/1Panel)"
+        echo -e "  ${C_WARN}d2${C_RST} 📊 安全监控 (Uptime Kuma/资源仪表)"
+        echo -e "  ${C_WARN}d3${C_RST} 🛰 网络诊断 (路由/IP 质量/流媒体)"
+        echo -e "  ${C_WARN}d4${C_RST} 🧰 系统工具 (档案/时区/DNS/清理)"
+        echo ""
+        echo -e "${C_INFO}▎E · 应急与恢复${C_RST}"
+        echo -e "  ${C_WARN}e1${C_RST} 🚨 应急检查 (被黑排查)"
+        echo -e "  ${C_WARN}e2${C_RST} 📊 性能与资源 (跑分/BBR/Swap)"
         echo ""
         echo -e "${C_INFO}▎Z · 维护${C_RST}"
         echo -e "  ${C_WARN}z1${C_RST} 安装全局命令 secure-vps"
@@ -2351,13 +2634,17 @@ home_page() {
                 ;;
             b1) page_ssh ;;
             b2) page_fw ;;
-            b3) page_f2b ;;
-            b4) page_shield ;;
-            c1) page_toolbox ;;
-            c2) page_tuning ;;
-            c3) page_users ;;
-            d1) page_deploy ;;
-            d2) page_bench ;;
+            b3) page_intrusion ;;
+            c1) page_shield_baseline ;;
+            c2) page_shield_kernel ;;
+            c3) page_shield_audit ;;
+            c4) page_shield_access ;;
+            d1) page_ops_docker ;;
+            d2) page_ops_monitor ;;
+            d3) page_ops_network ;;
+            d4) page_toolbox ;;
+            e1) page_emergency ;;
+            e2) page_emergency_perf ;;
             z1) secure_vps_alias_on ;;
             z2) secure_vps_alias_off ;;
             z3) secure_vps_self_update ;;

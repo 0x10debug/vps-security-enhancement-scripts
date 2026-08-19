@@ -1,6 +1,6 @@
-# Network Troubleshooting
+# Network Security Diagnostics
 
-> "My service is unreachable" — the decision tree that finds the problem in minutes, not hours.
+> Network-layer security troubleshooting — firewall rules, TLS inspection, IP reputation, and the "service unreachable" decision tree.
 
 ## Overview
 
@@ -29,7 +29,7 @@ Client can't reach service
   │
   ├─ Layer 3: Is Docker bypassing the firewall?
   │   └─ iptables -L DOCKER -n | grep <port>
-  │       ├─ Docker rule exists but UFW doesn't → apply UFW takeover (Ch.03)
+  │       ├─ Docker rule exists but UFW doesn't → apply UFW takeover (Ch.06)
   │       └─ No Docker involvement → go to Layer 4
   │
   ├─ Layer 4: Is the cloud security group blocking it?
