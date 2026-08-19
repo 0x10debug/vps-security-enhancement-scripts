@@ -33,7 +33,7 @@ wget -O vps_security_enhance.sh https://raw.githubusercontent.com/0x10debug/vps-
 
 | 层次 | 范围 | 状态 |
 |---|---|---|
-| L0 | 合规审计（CIS Benchmark、STIG） | 规划中（Phase 2） |
+| L0 | 合规审计（CIS Benchmark、STIG） | CIS 审计脚本已加入（Phase 2）；STIG 规划中 |
 | L1 | 容器与 Kubernetes 安全 | 规划中（Phase 3） |
 | L2 | 云平台 CIS 基线（AWS/GCP/Azure） | 规划中（Phase 4） |
 | L3 | 数据安全（数据库加固、大数据 SSL/审计） | 规划中（Phase 5） |
@@ -65,7 +65,7 @@ wget -O vps_security_enhance.sh https://raw.githubusercontent.com/0x10debug/vps-
 
 ## 配套手册
 
-8 章场景驱动手册，按安全层次组织，每章遵循"问题 → 排查 → 修复 → 验证"闭环：
+9 章场景驱动手册，按安全层次组织，每章遵循"问题 → 排查 → 修复 → 验证"闭环：
 
 | 章节 | 主题 | 安全视角 |
 |---|---|---|
@@ -77,6 +77,7 @@ wget -O vps_security_enhance.sh https://raw.githubusercontent.com/0x10debug/vps-
 | [06](handbook/06-container-security.md) | 容器安全 | Docker UFW 绕过、隔离、资源限制 |
 | [07](handbook/07-network-security-diagnostics.md) | 网络安全诊断 | 防火墙、TLS、IP 质量排查 |
 | [08](handbook/08-resource-security.md) | 资源安全 | 资源耗尽防护、加密性能 |
+| [09](handbook/09-cis-stig-compliance.md) | CIS 与 STIG 合规 | 自动化 CIS Benchmark 合规审计 |
 
 ## 速查卡
 
