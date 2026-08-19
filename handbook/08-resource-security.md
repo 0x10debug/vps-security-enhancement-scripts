@@ -1,6 +1,6 @@
-# Performance Tuning
+# Resource Security
 
-> Make the most of limited VPS resources: BBR, swap, disk I/O, memory, CPU, and Docker limits.
+> Resource exhaustion is an attack vector — defend against it with BBR, swap, limits, and crypto-aware performance tuning.
 
 ## Overview
 
@@ -500,7 +500,7 @@ Investigate:
 Fix:
   - CPU bound: add Docker CPU limits, optimize the application
   - Disk bound: add swap (if I/O is paging), reduce logging, upgrade disk
-  - Network bound: enable BBR (c2 → 1), check for DDoS (Ch.08)
+  - Network bound: enable BBR (c2 → 1), check for DDoS (Ch.03)
 Verify:
   - Load average stays below nproc under normal traffic
   - SSH remains responsive during traffic spikes

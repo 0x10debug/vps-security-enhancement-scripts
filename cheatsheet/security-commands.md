@@ -1,6 +1,6 @@
-# VPS Essential Commands Cheatsheet
+# VPS Security Commands Cheatsheet
 
-> One-page quick reference for VPS ops engineers. Print on A4, pin to wall.
+> One-page quick reference for VPS security ops. Print on A4, pin to wall.
 
 ---
 

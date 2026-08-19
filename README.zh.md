@@ -1,58 +1,47 @@
-# VPS 手边书 — VPS 与云计算运维人员的实战手册
+# VPS 安全增强脚本集 — 从首次登录到应急响应的全链路加固
 
-完整的 VPS 运维工具包：一个交互式 bash 脚本（服务器加固、诊断、评测），加 8 章场景驱动手册和 4 张可打印速查卡。运维人员需要的一切，一个 repo 搞定。
+以安全为核心的交互式 bash 脚本，配套场景驱动手册和速查卡。单文件、零依赖、一条命令启动——配一本真正的手册告诉你"为什么"，不只是"怎么做"。
 
-> 单文件。零依赖。一条命令启动。配一本真正的手册告诉你"为什么"，不只是"怎么做"。
+> 这是一个**活的仓库**：脚本和手册按安全方向持续扩展。当前版本以 2650 行交互式脚本 + 8 章手册 + 4 张速查卡为起点。后续迭代将加入 CIS/STIG 审计、容器/K8s 安全、云平台 CIS 基线、数据库加固、大数据 SSL、零信任、WAF、TLS 生命周期、密钥扫描、基于 CrowdSec 的应急响应。
 
 ## 快速开始
 
 ```bash
-wget -O vps_secure.sh https://raw.githubusercontent.com/0x10debug/vps-handbook/main/vps_secure.sh && chmod +x vps_secure.sh && ./vps_secure.sh
+wget -O vps_security_enhance.sh https://raw.githubusercontent.com/0x10debug/vps-security-enhancement-scripts/main/vps_security_enhance.sh && chmod +x vps_security_enhance.sh && ./vps_security_enhance.sh
 ```
 
-新机器直接选 **`a1` 全量初始化**——十分钟内完成：系统升级 → 防火墙 → BBR → Swap → Fail2Ban → 内核加固。
+新机器直接选 **`a1` 全量安全初始化**——十分钟内完成：系统升级 → 防火墙 → BBR → Swap → Fail2Ban → 内核加固。
 
 装好全局命令后，任意位置敲 `secure-vps` 即可唤起。
 
-## 内容概览
+## 脚本功能
 
-### 脚本（`vps_secure.sh`）
+脚本（`vps_security_enhance.sh`）按**安全层次**组织，不是按运维流程：
 
-2370 行交互式 bash 工具，覆盖：
-
-| 分区 | 功能 |
-|---|---|
-| **A · 快速** | 全量初始化、系统更新、工具箱、性能调优、用户管理 |
-| **B · 安全** | SSH 加固、防火墙（UFW/Firewalld）、Fail2Ban、纵深防御（内核、密码策略、sudo 审计、自动更新、Rkhunter、AIDE、auditd、Lynis） |
-| **C · Docker 与应用** | Docker 引擎、镜像加速、UFW 绕过修复、Portainer、Watchtower、Uptime Kuma、1Panel |
-| **D · 诊断与评测** | 实时仪表、YABS 跑分、带宽测速、流媒体解锁、回程路由、IP 质量评分 |
-| **Z · 维护** | 全局命令、自更新 |
-
-### 手册（`handbook/`）
-
-8 章场景驱动手册，每章遵循"问题 → 排查 → 修复 → 验证"闭环：
-
-| 章节 | 主题 | 关键场景 |
+| 分区 | 层次 | 功能 |
 |---|---|---|
-| [01](handbook/01-new-server-setup.md) | 新机开荒 | 首次登录、初始评估、快速初始化、验证清单 |
-| [02](handbook/02-security-baseline.md) | 安全基线 | SSH、防火墙、Fail2Ban、内核加固、Docker UFW 绕过、密码策略 |
-| [03](handbook/03-docker-ops.md) | Docker 运维 | 安装、镜像加速、UFW 修复、容器管理、清理 |
-| [04](handbook/04-network-troubleshoot.md) | 网络故障排查 | "服务不可达"决策树、DNS、路由、带宽、BBR |
-| [05](handbook/05-performance-tuning.md) | 性能调优 | BBR、Swap、磁盘 I/O、内存、CPU、Docker 资源限制 |
-| [06](handbook/06-backup-migration.md) | 备份与迁移 | 策略选择、Docker 卷备份、服务器迁移、恢复演练 |
-| [07](handbook/07-monitoring-alerts.md) | 监控与告警 | Uptime Kuma、完整监控栈、告警渠道、日志管理 |
-| [08](handbook/08-incident-response.md) | 应急响应 | "被黑了"前 10 分钟、入侵检测、恢复 |
+| **A · 快速通道** | — | 全量安全初始化（更新+防火墙+BBR+Swap+Fail2Ban+内核） |
+| **B · 访问安全** | L4 网络 | SSH 加固、防火墙（UFW/Firewalld）、入侵封禁（Fail2Ban + CrowdSec） |
+| **C · 纵深防御** | L0-L3 | 基线体检、内核加固、审计与完整性（auditd/AIDE/Rkhunter/Lynis）、密码与权限 |
+| **D · 安全运维** | — | 容器安全（Docker/Portainer/Watchtower/1Panel）、安全监控（Uptime Kuma）、网络诊断、系统工具 |
+| **E · 应急与恢复** | L6 检测 | 应急检查（被黑排查、登录记录、可疑 cron）、性能与资源（BBR/Swap/跑分） |
+| **Z · 维护** | — | 全局命令、自更新 |
 
-### 速查卡（`cheatsheet/`）
+### 安全层次路线图
 
-4 张一页纸可打印参考卡：
+7 层架构（L0 → L6）指导迭代计划。每层映射到专用脚本和手册章节，在 9 日迭代周期内逐步加入：
 
-| 速查卡 | 内容 |
-|---|---|
-| [essential-commands.md](cheatsheet/essential-commands.md) | 系统、进程、网络、文件、文本、用户、cron、磁盘、包管理命令 |
-| [docker-commands.md](cheatsheet/docker-commands.md) | Docker 与 Docker Compose 命令、单行命令、调试 |
-| [systemd-commands.md](cheatsheet/systemd-commands.md) | 服务管理、journalctl、targets、timers、故障排查 |
-| [troubleshooting-tree.md](cheatsheet/troubleshooting-tree.md) | 7 棵决策树：SSH 连不上、服务不可达、磁盘满、CPU 高、容器启动失败、网站慢、可疑活动 |
+| 层次 | 范围 | 状态 |
+|---|---|---|
+| L0 | 合规审计（CIS Benchmark、STIG） | 规划中（Phase 2） |
+| L1 | 容器与 Kubernetes 安全 | 规划中（Phase 3） |
+| L2 | 云平台 CIS 基线（AWS/GCP/Azure） | 规划中（Phase 4） |
+| L3 | 数据安全（数据库加固、大数据 SSL/审计） | 规划中（Phase 5） |
+| L4 | 网络与边界（零信任、WAF） | 规划中（Phase 6） |
+| L5 | 密钥与证书安全（TLS 生命周期、密钥扫描） | 规划中（Phase 7） |
+| L6 | 检测与响应（CrowdSec、应急取证） | CrowdSec 已集成到 B3；完整部署规划中（Phase 8） |
+
+完整分支策略见 [`dev-docs/0015`](https://github.com/0x10debug/vps-security-enhancement-scripts/blob/main/dev-docs/0015-vps-security-enhancement-scripts-branch-strategy.md)。
 
 ## 安全设计
 
@@ -62,28 +51,53 @@ wget -O vps_secure.sh https://raw.githubusercontent.com/0x10debug/vps-handbook/m
 2. **联动一致性**：更换 SSH 端口时自动同步 Fail2Ban 封禁端口；回滚配置时同样联动。
 3. **只读优先**：体检、审计全程不改系统；所有破坏性操作一律二次确认。
 
-### 安全审计说明
-
-脚本经过供应链安全审计：
+### 供应链安全审计
 
 | 风险点 | 状态 | 说明 |
 |---|---|---|
 | 硬编码密钥 | ✅ 干净 | 无密码、密钥、IP 硬编码 |
-| 外部脚本执行 | ⚠️ 已记录 | Docker 安装（`get.docker.com`）、YABS（`yabs.sh`）、bench.sh、NextTrace、IPQuality、融合怪——均来自官方源，均需用户确认 |
+| 外部脚本执行 | ⚠️ 已记录 | Docker 安装（`get.docker.com`）、CrowdSec 安装、YABS、bench.sh、NextTrace、IPQuality、融合怪——均来自官方源，均需用户确认 |
 | `eval` 使用 | ✅ 安全 | 仅用于包管理器命令（`eval "$PKG_INSTALL foo"`）——无用户输入到达 eval |
 | `rm -rf` 使用 | ✅ 有防护 | 仅在 Docker 卸载中，需双重确认 |
 | 自更新机制 | ✅ HTTPS | 从 GitHub raw 通过 HTTPS 下载 |
 | 输入验证 | ✅ 存在 | 所有交互输入在使用前验证 |
+| shellcheck | ✅ 干净 | `-S warning` 级别零警告 |
+
+## 配套手册
+
+8 章场景驱动手册，按安全层次组织，每章遵循"问题 → 排查 → 修复 → 验证"闭环：
+
+| 章节 | 主题 | 安全视角 |
+|---|---|---|
+| [01](handbook/01-first-login-security.md) | 首次登录安全 | 前 30 分钟：评估与加固 |
+| [02](handbook/02-security-baseline.md) | 安全基线 | SSH、防火墙、Fail2Ban/CrowdSec、内核、Docker UFW 绕过、密码策略 |
+| [03](handbook/03-incident-response.md) | 应急响应 | "被黑了"前 10 分钟、入侵检测、恢复 |
+| [04](handbook/04-security-monitoring.md) | 安全监控 | TLS 过期、SSH 不可达、入侵检测、日志管理 |
+| [05](handbook/05-backup-security.md) | 备份安全 | 备份作为安全网：凭证保护、恢复演练 |
+| [06](handbook/06-container-security.md) | 容器安全 | Docker UFW 绕过、隔离、资源限制 |
+| [07](handbook/07-network-security-diagnostics.md) | 网络安全诊断 | 防火墙、TLS、IP 质量排查 |
+| [08](handbook/08-resource-security.md) | 资源安全 | 资源耗尽防护、加密性能 |
+
+## 速查卡
+
+4 张一页纸可打印参考卡：
+
+| 速查卡 | 内容 |
+|---|---|
+| [security-commands.md](cheatsheet/security-commands.md) | 安全相关命令速查 |
+| [container-security-commands.md](cheatsheet/container-security-commands.md) | 容器安全命令 |
+| [systemd-commands.md](cheatsheet/systemd-commands.md) | 服务管理、journalctl、targets、timers |
+| [security-troubleshooting-tree.md](cheatsheet/security-troubleshooting-tree.md) | 7 棵决策树：SSH 连不上、服务不可达、磁盘满、CPU 高、容器启动失败、网站慢、可疑活动 |
 
 ## 脚本 vs 模块化：用哪个？
 
 | 需求 | 用 |
 |---|---|
-| 快速上手，一条命令，菜单驱动 | **vps_secure.sh**（本 repo） |
+| 快速上手，一条命令，菜单驱动 | **vps_security_enhance.sh**（本 repo） |
 | 模块化，CLI 驱动，逐模块控制 | [vps-bootstrap](https://github.com/0x10debug/vps-bootstrap) |
 | CIS 基准审计，漂移检测 | [security-audit](https://github.com/0x10debug/security-audit) |
 
-vps_secure.sh 和 vps-bootstrap 都覆盖 SSH/防火墙/Fail2Ban/内核加固——它们是同一能力的两个入口。脚本面向"我只想搞定"，模块化工具面向"我想控制每一步并与其他工具集成"。
+`vps_security_enhance.sh` 和 `vps-bootstrap` 都覆盖 SSH/防火墙/Fail2Ban/内核加固——它们是同一能力的两个入口。脚本面向"我只想搞定"，模块化工具面向"我想控制每一步并与其他工具集成"。
 
 ## 0x10debug 完整 VPS 工具套件
 
@@ -104,7 +118,7 @@ vps_secure.sh 和 vps-bootstrap 都覆盖 SSH/防火墙/Fail2Ban/内核加固—
 
 ## 致谢
 
-评测与探测能力调用：[YABS](https://github.com/masonr/yabs) · [bench.sh](https://bench.sh) · [NextTrace](https://github.com/nxtrace/NTrace-core) · [融合怪](https://github.com/spiritLHLS/ecs) · [IPQuality](https://github.com/xykt/IPQuality) · [Lynis](https://cisofy.com/lynis/) · [Endlessh](https://github.com/skeeto/endlessh)。应用部署依赖 [Docker](https://docker.com) 与 [1Panel](https://1panel.cn) 官方脚本。
+评测与探测能力调用：[YABS](https://github.com/masonr/yabs) · [bench.sh](https://bench.sh) · [NextTrace](https://github.com/nxtrace/NTrace-core) · [融合怪](https://github.com/spiritLHLS/ecs) · [IPQuality](https://github.com/xykt/IPQuality) · [Lynis](https://cisofy.com/lynis/) · [Endlessh](https://github.com/skeeto/endlessh)。入侵检测集成 [CrowdSec](https://github.com/crowdsecurity/crowdsec)。应用部署依赖 [Docker](https://docker.com) 与 [1Panel](https://1panel.cn) 官方脚本。
 
 ## 许可
 

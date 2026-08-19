@@ -1,6 +1,6 @@
-# Monitoring and Alerts
+# Security Monitoring
 
-> Catch issues before your users do — lightweight monitoring to full observability stacks.
+> Catch security issues before your users do — TLS expiry, SSH unreachable, intrusion detection, and log management.
 
 ## Overview
 
@@ -484,7 +484,7 @@ Investigate:
 Fix:
   1. Add logrotate config for the growing log file
   2. Set up monitor-stack disk usage alert (>85%)
-  3. Add Docker log rotation (Ch.03) if Docker logs are the cause
+  3. Add Docker log rotation (Ch.06) if Docker logs are the cause
 Verify:
   1. Monitor shows disk usage stable over time
   2. Alert fires if disk crosses 85%

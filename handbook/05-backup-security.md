@@ -1,6 +1,6 @@
-# Backup and Migration
+# Backup Security
 
-> Backups are insurance you pay for before you need them — and test before you claim.
+> Backups are your safety net — insurance you pay for before you need them, with credential protection and recovery drills.
 
 ## Overview
 
