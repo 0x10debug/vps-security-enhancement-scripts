@@ -88,18 +88,59 @@ CIS defines two compliance levels:
 
 **Recommendation**: Start with Level 1, fix all FAIL items, then run Level 2 and evaluate each FAIL against your specific workload.
 
-## STIG Compliance (Planned)
+## STIG Compliance Check
 
 DISA STIG (Security Technical Implementation Guide) is the US Department of Defense's hardening standard. It's stricter than CIS and required for US government systems.
 
-The planned `stig_compliance_check.sh` will cover:
+The `scripts/stig_compliance_check.sh` covers:
 
-- STIG Category 1 (high severity) checks
-- Modular control (enable/disable specific checks)
-- Scanner mode for batch assessment
-- Mapping to STIG SRG (Security Requirements Guide) IDs
+- **70+ checks** across 7 sections mapped to STIG SRG (Security Requirements Guide) IDs
+- **Severity classification**: CAT I (high), CAT II (medium), CAT III (low)
+- **Modular control**: `--enable`/`--disable` specific SRG IDs
+- **Scanner mode**: `--scanner` runs all checks without prompts
+- **Read-only**: never modifies system configuration
+- **Dual report**: TXT (human) + JSON (CI/CD)
 
-**Status**: Planned for Phase 2 iteration. See `dev-docs/0015` branch strategy.
+### What It Checks
+
+| Section | SRG Range | Key Checks |
+|---|---|---|
+| Access Control | SRG-OS-000023~031 | SSH root login, protocol, MaxAuthTries, ClientAliveInterval, access restrictions |
+| Audit & Accountability | SRG-OS-000032~042 | auditd installed/enabled, audit rules for login/logout/session/deletion/permission changes |
+| Identification & Auth | SRG-OS-000043~051 | No empty passwords, UID 0 only root, password minlen/complexity/reuse/lockout, no duplicate UIDs |
+| System Integrity | SRG-OS-000052~061 | ASLR, core dumps, kptr/dmesg/perf/ptrace restrict, AIDE installed + initialized + cron, rsyslog |
+| Config Management | SRG-OS-000062~074 | /etc/passwd/shadow/group/gshadow perms, cron dirs perms, no world-writable/unowned/ungrouped files |
+| Network Security | SRG-OS-000075~084 | IP forwarding, redirects, source route, ICMP, SYN cookies, firewall installed + active |
+| OS Hardening | SRG-OS-000085~093 | MAC (SELinux/AppArmor), bootloader password, warning banners, time sync, no X11, no unnecessary services |
+
+### Usage
+
+```bash
+# Scanner mode (all checks, no prompts)
+sudo ./scripts/stig_compliance_check.sh --scanner
+
+# Enable only specific SRG IDs
+sudo ./scripts/stig_compliance_check.sh --enable SRG-OS-000023 --enable SRG-OS-000024
+
+# Disable specific checks
+sudo ./scripts/stig_compliance_check.sh --disable SRG-OS-000089
+
+# Quiet mode (summary only)
+sudo ./scripts/stig_compliance_check.sh --scanner --quiet
+
+# JSON only (for CI/CD)
+sudo ./scripts/stig_compliance_check.sh --scanner --json
+```
+
+### STIG Severity Categories
+
+| Category | Severity | Action |
+|---|---|---|
+| **CAT I** | High — directly exploitable | Must fix immediately |
+| **CAT II** | Medium — indirect risk | Fix recommended |
+| **CAT III** | Low — best practice | Fix when possible |
+
+The summary report includes a severity breakdown showing CAT I and CAT II FAIL counts separately, so you can prioritize fixes.
 
 ## Compliance vs Hardening
 

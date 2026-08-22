@@ -2122,10 +2122,11 @@ page_shield_audit() {
         echo -e "  ${C_WARN}5.${C_RST} 🔍 Lynis 审计"
         echo -e "  ${C_WARN}6.${C_RST} 📋 CIS 合规审计 (Level 1)"
         echo -e "  ${C_WARN}7.${C_RST} 📋 CIS 合规审计 (Level 2)"
+        echo -e "  ${C_WARN}8.${C_RST} 📋 STIG 合规检查"
         echo -e "  ${C_WARN}0.${C_RST} 返回"
         echo
         local pick
-        read -r -p "❯ 选择 [0-7]: " pick
+        read -r -p "❯ 选择 [0-8]: " pick
         case $pick in
             1) rootkit_watch ;;
             2) page_integrity ;;
@@ -2134,6 +2135,7 @@ page_shield_audit() {
             5) lynis_audit ;;
             6) cis_audit_run 1 ;;
             7) cis_audit_run 2 ;;
+            8) stig_audit_run ;;
             0) break ;;
             *) echo -e "${C_FAIL}无效输入${C_RST}"; sleep 1 ;;
         esac
@@ -2159,6 +2161,26 @@ cis_audit_run() {
     echo -e "${C_INFO}报告将保存到 /var/log/cis-audit/${C_RST}"
     echo ""
     bash "$cis_script" --level "$level"
+    wait_key
+}
+
+stig_audit_run() {
+    local script_dir
+    script_dir=$(dirname "$(readlink -f "$0" 2>/dev/null || echo "$0")")
+    local stig_script="$script_dir/scripts/stig_compliance_check.sh"
+    if [ ! -f "$stig_script" ]; then
+        stig_script="/usr/local/share/secure-vps/scripts/stig_compliance_check.sh"
+    fi
+    if [ ! -f "$stig_script" ]; then
+        echo -e "${C_FAIL}找不到 stig_compliance_check.sh${C_RST}"
+        echo -e "${C_INFO}请从 repo 运行, 或确保全局安装完整。${C_RST}"
+        wait_key; return
+    fi
+    echo -e "${C_WARN}>>> DISA STIG 合规检查 (Scanner 模式) <<<${C_RST}"
+    echo -e "${C_INFO}只读模式, 不修改任何系统配置。${C_RST}"
+    echo -e "${C_INFO}报告将保存到 /var/log/stig-audit/${C_RST}"
+    echo ""
+    bash "$stig_script" --scanner
     wait_key
 }
 
