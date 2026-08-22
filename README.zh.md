@@ -33,7 +33,7 @@ wget -O vps_security_enhance.sh https://raw.githubusercontent.com/0x10debug/vps-
 
 | 层次 | 范围 | 状态 |
 |---|---|---|
-| L0 | 合规审计（CIS Benchmark、STIG） | CIS 审计脚本已加入（Phase 2）；STIG 规划中 |
+| L0 | 合规审计（CIS Benchmark、STIG） | CIS + STIG 审计脚本已加入 |
 | L1 | 容器与 Kubernetes 安全 | 规划中（Phase 3） |
 | L2 | 云平台 CIS 基线（AWS/GCP/Azure） | 规划中（Phase 4） |
 | L3 | 数据安全（数据库加固、大数据 SSL/审计） | 规划中（Phase 5） |
