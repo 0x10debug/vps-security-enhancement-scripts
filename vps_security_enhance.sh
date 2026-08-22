@@ -2184,6 +2184,30 @@ stig_audit_run() {
     wait_key
 }
 
+docker_audit_run() {
+    if ! command -v docker >/dev/null 2>&1; then
+        echo -e "${C_FAIL}Docker 未安装${C_RST}"
+        wait_key; return
+    fi
+    local script_dir
+    script_dir=$(dirname "$(readlink -f "$0" 2>/dev/null || echo "$0")")
+    local docker_script="$script_dir/scripts/docker_security_audit.sh"
+    if [ ! -f "$docker_script" ]; then
+        docker_script="/usr/local/share/secure-vps/scripts/docker_security_audit.sh"
+    fi
+    if [ ! -f "$docker_script" ]; then
+        echo -e "${C_FAIL}找不到 docker_security_audit.sh${C_RST}"
+        echo -e "${C_INFO}请从 repo 运行, 或确保全局安装完整。${C_RST}"
+        wait_key; return
+    fi
+    echo -e "${C_WARN}>>> CIS Docker Benchmark 合规审计 <<<${C_RST}"
+    echo -e "${C_INFO}只读模式, 不修改任何 Docker 配置或容器。${C_RST}"
+    echo -e "${C_INFO}报告将保存到 /var/log/docker-audit/${C_RST}"
+    echo ""
+    bash "$docker_script"
+    wait_key
+}
+
 page_shield_access() {
     while true; do
         clear
@@ -2289,15 +2313,17 @@ page_ops_docker() {
         echo -e "  ${C_WARN}2.${C_RST} 📦 Portainer (Web 管理面板)"
         echo -e "  ${C_WARN}3.${C_RST} 🔄 Watchtower (自动更新)"
         echo -e "  ${C_WARN}4.${C_RST} 🖥 1Panel (服务器面板)"
+        echo -e "  ${C_WARN}5.${C_RST} 📋 Docker 合规审计 (CIS Benchmark)"
         echo -e "  ${C_WARN}0.${C_RST} 返回"
         echo
         local pick
-        read -r -p "❯ 选择 [0-4]: " pick
+        read -r -p "❯ 选择 [0-5]: " pick
         case $pick in
             1) page_docker ;;
             2) app_portainer_on ;;
             3) app_watch_on ;;
             4) page_1panel ;;
+            5) docker_audit_run ;;
             0) break ;;
             *) echo -e "${C_FAIL}无效输入${C_RST}"; sleep 1 ;;
         esac
