@@ -33,7 +33,7 @@ The 7-layer architecture (L0 → L6) guides the iteration plan. Each layer maps 
 
 | Layer | Scope | Status |
 |---|---|---|
-| L0 | Compliance audit (CIS Benchmark, STIG) | CIS audit script added (Phase 2); STIG planned |
+| L0 | Compliance audit (CIS Benchmark, STIG) | CIS + STIG audit scripts added |
 | L1 | Container & Kubernetes security | Planned (Phase 3) |
 | L2 | Cloud platform CIS baselines (AWS/GCP/Azure) | Planned (Phase 4) |
 | L3 | Data security (database hardening, big-data SSL/audit) | Planned (Phase 5) |
