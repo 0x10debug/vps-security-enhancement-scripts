@@ -124,3 +124,174 @@ services:
 - [CIS Docker Benchmark](https://www.cisecurity.org/benchmark/docker) — Official benchmark (free download)
 - [Docker Security Best Practices](https://docs.docker.com/engine/security/) — Docker official docs
 - [CIS Docker Benchmark v1.6.0](https://www.cisecurity.org/benchmark/docker) — Reference version for this audit
+
+---
+
+# Dockerfile Hardening
+
+> Catch insecure patterns in your Dockerfiles before they ship — from `:latest` tags to hardcoded secrets to missing healthchecks.
+
+## Overview
+
+While the Docker security audit (above) checks the **runtime** environment, the Dockerfile hardener checks the **build-time** definition. Insecure Dockerfiles lead to bloated, vulnerable images that no amount of runtime hardening can fully fix.
+
+This section covers:
+
+- **`scripts/dockerfile_hardener.sh`** — Dockerfile security analysis + automatic fix mode (18 rules)
+
+The tool supports **read-only analysis** (default) and **auto-fix mode** (`--fix`).
+
+## What It Checks
+
+18 rules across 6 categories:
+
+| Rule | Severity | Category | What it detects |
+|---|---|---|---|
+| DF-001 | error | Base image | `FROM :latest` or missing version tag |
+| DF-002 | warning | User | Missing `USER` directive (runs as root) |
+| DF-003 | error | User | `USER root` explicitly declared |
+| DF-004 | error | Secrets | Hardcoded secrets in `ENV` (PASSWORD/KEY/TOKEN) |
+| DF-005 | error | Secrets | Secrets in `ARG` (persists in image history) |
+| DF-006 | warning | Health | Missing `HEALTHCHECK` directive |
+| DF-007 | warning | Instructions | `ADD` used instead of `COPY` (non-URL/tar) |
+| DF-008 | warning | Hygiene | `apt-get install` without cache cleanup |
+| DF-009 | info | Hygiene | `apt-get install` without `--no-install-recommends` |
+| DF-010 | error | Permissions | `chmod 777` (world-writable) |
+| DF-011 | warning | Instructions | `sudo` used in `RUN` (unnecessary in containers) |
+| DF-012 | error | Supply chain | `curl ... \| bash` (blind remote execution) |
+| DF-013 | warning | Copy | `COPY . .` (may copy sensitive files) |
+| DF-014 | warning | Hygiene | Missing `.dockerignore` |
+| DF-015 | warning | Process | Shell-form `ENTRYPOINT`/`CMD` (signal handling) |
+| DF-016 | info | Layers | Too many `RUN` instructions (>10) |
+| DF-017 | info | Network | Too many `EXPOSE` ports (>5) |
+| DF-018 | info | Build | No multi-stage build |
+
+## Usage
+
+```bash
+# Analyze a single Dockerfile
+./scripts/dockerfile_hardener.sh Dockerfile
+
+# Analyze + auto-fix (creates Dockerfile.hardened.<timestamp>)
+./scripts/dockerfile_hardener.sh --fix Dockerfile
+
+# SARIF v2.1.0 output (for GitHub Code Scanning / CI integration)
+./scripts/dockerfile_hardener.sh --sarif Dockerfile
+
+# Recursive scan of a directory
+./scripts/dockerfile_hardener.sh -r ./my-project/
+
+# Quiet mode (summary only)
+./scripts/dockerfile_hardener.sh --quiet Dockerfile
+```
+
+### Auto-Fix Mode
+
+`--fix` applies safe, non-destructive fixes to a copy of the original file:
+
+| Fix | Action |
+|---|---|
+| `ADD` → `COPY` | Converts non-URL/non-tar `ADD` to `COPY` |
+| Missing `HEALTHCHECK` | Appends a default HTTP healthcheck |
+| Missing apt cleanup | Appends `rm -rf /var/lib/apt/lists/*` |
+| Missing `.dockerignore` | Creates one with common exclusions |
+
+Fixes that require human judgment (like `:latest` → specific version) are flagged but not auto-applied.
+
+### Output
+
+Each run produces:
+
+| Report | Format | Use Case |
+|---|---|---|
+| `dockerfile-hardener-<timestamp>.txt` | Human-readable | Manual review |
+| `dockerfile-hardener-<timestamp>.sarif` | SARIF v2.1.0 | GitHub Code Scanning, CI/CD |
+
+### Integration with the Main Script
+
+From `secure-vps`, the Dockerfile hardener is accessible via:
+
+```
+D · 安全运维 → d1 容器安全 → Dockerfile 加固
+```
+
+## Common Findings and Fixes
+
+### FAIL: FROM :latest
+
+**Risk**: Image content changes unpredictably, breaking reproducibility.
+**Fix**: Pin to a specific version:
+```dockerfile
+FROM nginx:1.27.2-alpine    # instead of nginx:latest
+```
+
+### FAIL: Hardcoded secrets in ENV/ARG
+
+**Risk**: Secrets are baked into image layers and recoverable via `docker history`.
+**Fix**: Use runtime injection or BuildKit secrets:
+```dockerfile
+# Bad
+ENV API_KEY=sk-1234567890
+
+# Good (BuildKit)
+RUN --mount=type=secret,id=api_key \
+    API_KEY=$(cat /run/secrets/api_key) ./configure
+```
+
+### FAIL: curl | bash
+
+**Risk**: Blindly executes arbitrary remote code with no integrity check.
+**Fix**: Download, verify checksum, then execute:
+```dockerfile
+RUN curl -fsSL https://example.com/install.sh -o /tmp/install.sh && \
+    echo "expected_sha256  /tmp/install.sh" | sha256sum -c && \
+    sh /tmp/install.sh && rm /tmp/install.sh
+```
+
+### WARN: Shell-form ENTRYPOINT/CMD
+
+**Risk**: PID 1 is `/bin/sh -c`, which doesn't forward signals (SIGTERM for graceful shutdown).
+**Fix**: Use exec form:
+```dockerfile
+CMD ["python", "server.py"]    # instead of: CMD python server.py
+```
+
+## Secure Dockerfile Template
+
+```dockerfile
+# Pin specific version
+FROM python:3.12.7-slim AS builder
+
+# No-install-recommends + cleanup in same layer
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy only needed files (not COPY . .)
+COPY requirements.txt /app/
+RUN pip install --no-cache-dir -r /app/requirements.txt
+
+# Multi-stage: runtime image
+FROM python:3.12.7-slim AS runtime
+
+# Non-root user
+RUN useradd -r -s /bin/false appuser
+USER appuser
+
+COPY --from=builder /usr/local/lib/python3.12/site-packages /usr/local/lib/python3.12/site-packages
+COPY --chown=appuser:appuser ./app /app
+
+# Healthcheck
+HEALTHCHECK --interval=30s --timeout=3s --retries=3 \
+    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')" || exit 1
+
+# Exec form
+CMD ["python", "/app/server.py"]
+```
+
+## References
+
+- [Dockerfile reference](https://docs.docker.com/engine/reference/builder/) — Official Docker docs
+- [Dockerfile best practices](https://docs.docker.com/develop/develop-images/dockerfile_best-practices/) — Docker official guide
+- [SARIF v2.1.0 spec](https://docs.oasis-open.org/sarif/sarif/v2.1.0/sarif-v2.1.0.html) — Static Analysis Results Interchange Format
+- [dockerfile-hardener](https://github.com/macbuildssys/dockerfile-hardener) — Reference project
