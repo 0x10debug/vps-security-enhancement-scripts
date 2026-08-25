@@ -2234,6 +2234,31 @@ dockerfile_hardener_run() {
     wait_key
 }
 
+k8s_audit_run() {
+    if ! command -v kubectl >/dev/null 2>&1; then
+        echo -e "${C_FAIL}kubectl 未安装${C_RST}"
+        echo -e "${C_INFO}请先安装 kubectl 并配置 kubeconfig${C_RST}"
+        wait_key; return
+    fi
+    local script_dir
+    script_dir=$(dirname "$(readlink -f "$0" 2>/dev/null || echo "$0")")
+    local k8s_script="$script_dir/scripts/k8s_security_audit.sh"
+    if [ ! -f "$k8s_script" ]; then
+        k8s_script="/usr/local/share/secure-vps/scripts/k8s_security_audit.sh"
+    fi
+    if [ ! -f "$k8s_script" ]; then
+        echo -e "${C_FAIL}找不到 k8s_security_audit.sh${C_RST}"
+        echo -e "${C_INFO}请从 repo 运行, 或确保全局安装完整。${C_RST}"
+        wait_key; return
+    fi
+    echo -e "${C_WARN}>>> CIS Kubernetes Benchmark 合规审计 <<<${C_RST}"
+    echo -e "${C_INFO}只读模式, 不修改任何 Kubernetes 资源或节点配置。${C_RST}"
+    echo -e "${C_INFO}报告将保存到 /var/log/k8s-audit/${C_RST}"
+    echo ""
+    bash "$k8s_script"
+    wait_key
+}
+
 page_shield_access() {
     while true; do
         clear
@@ -2341,10 +2366,11 @@ page_ops_docker() {
         echo -e "  ${C_WARN}4.${C_RST} 🖥 1Panel (服务器面板)"
         echo -e "  ${C_WARN}5.${C_RST} 📋 Docker 合规审计 (CIS Benchmark)"
         echo -e "  ${C_WARN}6.${C_RST} 🛠 Dockerfile 加固 (分析/修复)"
+        echo -e "  ${C_WARN}7.${C_RST} ☸ K8s 安全审计 (CIS Benchmark)"
         echo -e "  ${C_WARN}0.${C_RST} 返回"
         echo
         local pick
-        read -r -p "❯ 选择 [0-6]: " pick
+        read -r -p "❯ 选择 [0-7]: " pick
         case $pick in
             1) page_docker ;;
             2) app_portainer_on ;;
@@ -2352,6 +2378,7 @@ page_ops_docker() {
             4) page_1panel ;;
             5) docker_audit_run ;;
             6) dockerfile_hardener_run ;;
+            7) k8s_audit_run ;;
             0) break ;;
             *) echo -e "${C_FAIL}无效输入${C_RST}"; sleep 1 ;;
         esac
