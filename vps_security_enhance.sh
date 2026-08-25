@@ -2208,6 +2208,32 @@ docker_audit_run() {
     wait_key
 }
 
+dockerfile_hardener_run() {
+    local script_dir
+    script_dir=$(dirname "$(readlink -f "$0" 2>/dev/null || echo "$0")")
+    local hardener_script="$script_dir/scripts/dockerfile_hardener.sh"
+    if [ ! -f "$hardener_script" ]; then
+        hardener_script="/usr/local/share/secure-vps/scripts/dockerfile_hardener.sh"
+    fi
+    if [ ! -f "$hardener_script" ]; then
+        echo -e "${C_FAIL}找不到 dockerfile_hardener.sh${C_RST}"
+        echo -e "${C_INFO}请从 repo 运行, 或确保全局安装完整。${C_RST}"
+        wait_key; return
+    fi
+    echo -e "${C_WARN}>>> Dockerfile 安全分析与加固 <<<${C_RST}"
+    echo -e "${C_INFO}输入 Dockerfile 路径进行分析 (--fix 启用自动修复)。${C_RST}"
+    echo ""
+    read -r -p "Dockerfile 路径 (或目录, -r 递归): " df_target
+    [ -z "$df_target" ] && { echo -e "${C_FAIL}未输入路径${C_RST}"; wait_key; return; }
+    local df_fix=""
+    if ask_yes "启用自动修复模式 (--fix)?"; then
+        df_fix="--fix"
+    fi
+    echo ""
+    bash "$hardener_script" $df_fix "$df_target"
+    wait_key
+}
+
 page_shield_access() {
     while true; do
         clear
@@ -2314,16 +2340,18 @@ page_ops_docker() {
         echo -e "  ${C_WARN}3.${C_RST} 🔄 Watchtower (自动更新)"
         echo -e "  ${C_WARN}4.${C_RST} 🖥 1Panel (服务器面板)"
         echo -e "  ${C_WARN}5.${C_RST} 📋 Docker 合规审计 (CIS Benchmark)"
+        echo -e "  ${C_WARN}6.${C_RST} 🛠 Dockerfile 加固 (分析/修复)"
         echo -e "  ${C_WARN}0.${C_RST} 返回"
         echo
         local pick
-        read -r -p "❯ 选择 [0-5]: " pick
+        read -r -p "❯ 选择 [0-6]: " pick
         case $pick in
             1) page_docker ;;
             2) app_portainer_on ;;
             3) app_watch_on ;;
             4) page_1panel ;;
             5) docker_audit_run ;;
+            6) dockerfile_hardener_run ;;
             0) break ;;
             *) echo -e "${C_FAIL}无效输入${C_RST}"; sleep 1 ;;
         esac

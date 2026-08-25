@@ -34,7 +34,7 @@ The 7-layer architecture (L0 → L6) guides the iteration plan. Each layer maps 
 | Layer | Scope | Status |
 |---|---|---|
 | L0 | Compliance audit (CIS Benchmark, STIG) | CIS + STIG audit scripts added |
-| L1 | Container & Kubernetes security | Docker audit added; K8s planned |
+| L1 | Container & Kubernetes security | Docker audit + Dockerfile hardener added; K8s planned |
 | L2 | Cloud platform CIS baselines (AWS/GCP/Azure) | Planned (Phase 4) |
 | L3 | Data security (database hardening, big-data SSL/audit) | Planned (Phase 5) |
 | L4 | Network & perimeter (zero-trust, WAF) | Planned (Phase 6) |
@@ -78,7 +78,7 @@ See [`dev-docs/0015`](https://github.com/0x10debug/vps-security-enhancement-scri
 | [07](handbook/07-network-security-diagnostics.md) | Network Security Diagnostics | Firewall, TLS, IP quality troubleshooting |
 | [08](handbook/08-resource-security.md) | Resource Security | Resource exhaustion defense, crypto performance |
 | [09](handbook/09-cis-stig-compliance.md) | CIS & STIG Compliance | Automated compliance audit against CIS Benchmarks and DISA STIG |
-| [10](handbook/10-container-security-audit.md) | Container Security Audit | CIS Docker Benchmark automated audit |
+| [10](handbook/10-container-security-audit.md) | Container Security Audit | CIS Docker Benchmark audit + Dockerfile hardening (18 rules, auto-fix, SARIF) |
 
 ## Cheatsheets
 
