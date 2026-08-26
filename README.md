@@ -34,7 +34,7 @@ The 7-layer architecture (L0 → L6) guides the iteration plan. Each layer maps 
 | Layer | Scope | Status |
 |---|---|---|
 | L0 | Compliance audit (CIS Benchmark, STIG) | CIS + STIG audit scripts added |
-| L1 | Container & Kubernetes security | Docker audit + Dockerfile hardener + K8s audit added |
+| L1 | Container & Kubernetes security | Docker audit + Dockerfile hardener + K8s audit + runtime security (Falco/Tetragon) added |
 | L2 | Cloud platform CIS baselines (AWS/GCP/Azure) | Planned (Phase 4) |
 | L3 | Data security (database hardening, big-data SSL/audit) | Planned (Phase 5) |
 | L4 | Network & perimeter (zero-trust, WAF) | Planned (Phase 6) |
@@ -65,7 +65,7 @@ See [`dev-docs/0015`](https://github.com/0x10debug/vps-security-enhancement-scri
 
 ## Handbook (Included)
 
-11 scenario-driven chapters organized by security layer. Each follows "Problem → Investigate → Fix → Verify":
+12 scenario-driven chapters organized by security layer. Each follows "Problem → Investigate → Fix → Verify":
 
 | Chapter | Topic | Security Angle |
 |---|---|---|
@@ -80,6 +80,7 @@ See [`dev-docs/0015`](https://github.com/0x10debug/vps-security-enhancement-scri
 | [09](handbook/09-cis-stig-compliance.md) | CIS & STIG Compliance | Automated compliance audit against CIS Benchmarks and DISA STIG |
 | [10](handbook/10-container-security-audit.md) | Container Security Audit | CIS Docker Benchmark audit + Dockerfile hardening (18 rules, auto-fix, SARIF) |
 | [11](handbook/11-k8s-security.md) | Kubernetes Security Audit | CIS Kubernetes Benchmark audit (60+ checks, control plane + worker + policies + workload) |
+| [12](handbook/12-runtime-security.md) | Runtime Security | Falco + Tetragon eBPF-based runtime detection and enforcement |
 
 ## Cheatsheets
 

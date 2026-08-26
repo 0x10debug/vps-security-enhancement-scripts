@@ -2259,6 +2259,42 @@ k8s_audit_run() {
     wait_key
 }
 
+runtime_security_run() {
+    local script_dir
+    script_dir=$(dirname "$(readlink -f "$0" 2>/dev/null || echo "$0")")
+    local rs_script="$script_dir/scripts/runtime_security_setup.sh"
+    if [ ! -f "$rs_script" ]; then
+        rs_script="/usr/local/share/secure-vps/scripts/runtime_security_setup.sh"
+    fi
+    if [ ! -f "$rs_script" ]; then
+        echo -e "${C_FAIL}找不到 runtime_security_setup.sh${C_RST}"
+        echo -e "${C_INFO}请从 repo 运行, 或确保全局安装完整。${C_RST}"
+        wait_key; return
+    fi
+    echo -e "${C_WARN}>>> 运行时安全部署 (Falco + Tetragon) <<<${C_RST}"
+    echo -e "${C_INFO}生成本地部署配置模板, 不直接安装。${C_RST}"
+    echo ""
+    echo -e "  ${C_WARN}1.${C_RST} 交互式向导 (推荐)"
+    echo -e "  ${C_WARN}2.${C_RST} 生成 Falco 配置"
+    echo -e "  ${C_WARN}3.${C_RST} 生成 Tetragon 配置"
+    echo -e "  ${C_WARN}4.${C_RST} 审计当前运行时安全状态"
+    echo -e "  ${C_WARN}5.${C_RST} 查看检测规则"
+    echo -e "  ${C_WARN}0.${C_RST} 返回"
+    echo
+    local pick
+    read -r -p "❯ 选择 [0-5]: " pick
+    case $pick in
+        1) bash "$rs_script" ;;
+        2) bash "$rs_script" --falco ;;
+        3) bash "$rs_script" --tetragon ;;
+        4) bash "$rs_script" --audit ;;
+        5) bash "$rs_script" --rules ;;
+        0) return ;;
+        *) echo -e "${C_FAIL}无效输入${C_RST}"; sleep 1 ;;
+    esac
+    wait_key
+}
+
 page_shield_access() {
     while true; do
         clear
@@ -2367,10 +2403,11 @@ page_ops_docker() {
         echo -e "  ${C_WARN}5.${C_RST} 📋 Docker 合规审计 (CIS Benchmark)"
         echo -e "  ${C_WARN}6.${C_RST} 🛠 Dockerfile 加固 (分析/修复)"
         echo -e "  ${C_WARN}7.${C_RST} ☸ K8s 安全审计 (CIS Benchmark)"
+        echo -e "  ${C_WARN}8.${C_RST} 🛡 运行时安全 (Falco/Tetragon)"
         echo -e "  ${C_WARN}0.${C_RST} 返回"
         echo
         local pick
-        read -r -p "❯ 选择 [0-7]: " pick
+        read -r -p "❯ 选择 [0-8]: " pick
         case $pick in
             1) page_docker ;;
             2) app_portainer_on ;;
@@ -2379,6 +2416,7 @@ page_ops_docker() {
             5) docker_audit_run ;;
             6) dockerfile_hardener_run ;;
             7) k8s_audit_run ;;
+            8) runtime_security_run ;;
             0) break ;;
             *) echo -e "${C_FAIL}无效输入${C_RST}"; sleep 1 ;;
         esac
