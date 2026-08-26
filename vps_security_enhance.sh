@@ -2467,6 +2467,73 @@ page_ops_network() {
     done
 }
 
+page_ops_cloud() {
+    while true; do
+        clear
+        echo -e "${C_OK}═══════════════════${C_RST}"
+        echo -e "${C_OK}     云安全           ${C_RST}"
+        echo -e "${C_OK}═══════════════════${C_RST}"
+        echo -e "  ${C_WARN}1.${C_RST} ☁️ 云平台 CIS 基线审计 (自动探测)"
+        echo -e "  ${C_WARN}2.${C_RST} 📋 查看检测规则"
+        echo -e "  ${C_WARN}0.${C_RST} 返回"
+        echo
+        local pick
+        read -r -p "❯ 选择 [0-2]: " pick
+        case $pick in
+            1) cloud_cis_run ;;
+            2) cloud_cis_rules ;;
+            0) break ;;
+            *) echo -e "${C_FAIL}无效输入${C_RST}"; sleep 1 ;;
+        esac
+    done
+}
+
+cloud_cis_run() {
+    local script_dir
+    script_dir=$(dirname "$(readlink -f "$0" 2>/dev/null || echo "$0")")
+    local cis_script="$script_dir/scripts/cloud_cis_baseline.sh"
+    if [ ! -f "$cis_script" ]; then
+        cis_script="/usr/local/share/secure-vps/scripts/cloud_cis_baseline.sh"
+    fi
+    if [ ! -f "$cis_script" ]; then
+        echo -e "${C_FAIL}找不到 cloud_cis_baseline.sh${C_RST}"
+        echo -e "${C_INFO}请从 repo 运行, 或确保全局安装完整。${C_RST}"
+        wait_key; return
+    fi
+    echo -e "${C_WARN}>>> 云平台 CIS 基线审计 <<<${C_RST}"
+    echo -e "${C_INFO}只读模式, 不修改任何云资源。${C_RST}"
+    echo -e "${C_INFO}自动探测已认证的云 CLI (aws/gcloud/az)。${C_RST}"
+    echo -e "${C_INFO}报告将保存到 /var/log/cloud-cis-audit/${C_RST}"
+    echo ""
+    bash "$cis_script"
+    wait_key
+}
+
+cloud_cis_rules() {
+    echo -e "${C_WARN}>>> 云平台 CIS 检测规则 <<<${C_RST}"
+    echo ""
+    echo -e "${C_INFO}── AWS CIS Foundations Benchmark ──${C_RST}"
+    echo "  IAM:       12 checks (root keys, MFA, password policy, unused keys)"
+    echo "  Network:   6 checks (SG open ports, VPC flow logs, default SG, NACLs)"
+    echo "  Logging:   6 checks (CloudTrail, log validation, Config, S3 access logs)"
+    echo "  Encryption: 4 checks (S3 SSE, EBS, RDS, KMS rotation)"
+    echo ""
+    echo -e "${C_INFO}── GCP CIS Foundation Benchmark ──${C_RST}"
+    echo "  IAM:       4 checks (SA key age, user-managed keys, 2FA, owner role)"
+    echo "  Network:   5 checks (firewall open ports, VPC flow logs, default network)"
+    echo "  Logging:   3 checks (audit logs, admin read, data read)"
+    echo "  Encryption: 3 checks (CMEK disks, Cloud SQL, GCS buckets)"
+    echo ""
+    echo -e "${C_INFO}── Azure CIS Foundation Benchmark ──${C_RST}"
+    echo "  IAM:       4 checks (MFA privileged, guest accounts, custom owner, password)"
+    echo "  Network:   4 checks (NSG open ports, Network Watcher)"
+    echo "  Logging:   3 checks (activity log alerts, diagnostic settings)"
+    echo "  Encryption: 3 checks (disk encryption, storage HTTPS, SQL TDE)"
+    echo ""
+    echo -e "${C_INFO}运行审计: secure-vps → d5 → 1${C_RST}"
+    wait_key
+}
+
 page_emergency_perf() {
     while true; do
         clear
@@ -2770,6 +2837,7 @@ home_page() {
         echo -e "  ${C_WARN}d2${C_RST} 📊 安全监控 (Uptime Kuma/资源仪表)"
         echo -e "  ${C_WARN}d3${C_RST} 🛰 网络诊断 (路由/IP 质量/流媒体)"
         echo -e "  ${C_WARN}d4${C_RST} 🧰 系统工具 (档案/时区/DNS/清理)"
+        echo -e "  ${C_WARN}d5${C_RST} ☁️ 云安全 (AWS/GCP/Azure CIS 基线)"
         echo ""
         echo -e "${C_INFO}▎E · 应急与恢复${C_RST}"
         echo -e "  ${C_WARN}e1${C_RST} 🚨 应急检查 (被黑排查)"
@@ -2810,6 +2878,7 @@ home_page() {
             d2) page_ops_monitor ;;
             d3) page_ops_network ;;
             d4) page_toolbox ;;
+            d5) page_ops_cloud ;;
             e1) page_emergency ;;
             e2) page_emergency_perf ;;
             z1) secure_vps_alias_on ;;
