@@ -2534,6 +2534,53 @@ cloud_cis_rules() {
     wait_key
 }
 
+page_ops_database() {
+    while true; do
+        clear
+        echo -e "${C_OK}═══════════════════${C_RST}"
+        echo -e "${C_OK}     数据库安全       ${C_RST}"
+        echo -e "${C_OK}═══════════════════${C_RST}"
+        echo -e "  ${C_WARN}1.${C_RST} 🗄️ 数据库安全审计 (自动探测)"
+        echo -e "  ${C_WARN}2.${C_RST} 📋 生成 MySQL 加固配置"
+        echo -e "  ${C_WARN}3.${C_RST} 📋 生成 PostgreSQL 加固配置"
+        echo -e "  ${C_WARN}4.${C_RST} 📋 生成 Redis 加固配置"
+        echo -e "  ${C_WARN}5.${C_RST} 📋 生成 MongoDB 加固配置"
+        echo -e "  ${C_WARN}0.${C_RST} 返回"
+        echo
+        local pick
+        read -r -p "❯ 选择 [0-5]: " pick
+        case $pick in
+            1) db_hardening_run "--audit" ;;
+            2) db_hardening_run "--mysql" ;;
+            3) db_hardening_run "--postgres" ;;
+            4) db_hardening_run "--redis" ;;
+            5) db_hardening_run "--mongodb" ;;
+            0) break ;;
+            *) echo -e "${C_FAIL}无效输入${C_RST}"; sleep 1 ;;
+        esac
+    done
+}
+
+db_hardening_run() {
+    local mode="$1"
+    local script_dir
+    script_dir=$(dirname "$(readlink -f "$0" 2>/dev/null || echo "$0")")
+    local db_script="$script_dir/scripts/database_hardening.sh"
+    if [ ! -f "$db_script" ]; then
+        db_script="/usr/local/share/secure-vps/scripts/database_hardening.sh"
+    fi
+    if [ ! -f "$db_script" ]; then
+        echo -e "${C_FAIL}找不到 database_hardening.sh${C_RST}"
+        echo -e "${C_INFO}请从 repo 运行, 或确保全局安装完整。${C_RST}"
+        wait_key; return
+    fi
+    echo -e "${C_WARN}>>> 数据库安全加固 <<<${C_RST}"
+    echo -e "${C_INFO}审计模式为只读, 配置生成不直接修改运行中的数据库。${C_RST}"
+    echo ""
+    bash "$db_script" "$mode"
+    wait_key
+}
+
 page_emergency_perf() {
     while true; do
         clear
@@ -2838,6 +2885,7 @@ home_page() {
         echo -e "  ${C_WARN}d3${C_RST} 🛰 网络诊断 (路由/IP 质量/流媒体)"
         echo -e "  ${C_WARN}d4${C_RST} 🧰 系统工具 (档案/时区/DNS/清理)"
         echo -e "  ${C_WARN}d5${C_RST} ☁️ 云安全 (AWS/GCP/Azure CIS 基线)"
+        echo -e "  ${C_WARN}d6${C_RST} 🗄️ 数据库安全 (MySQL/PG/Redis/Mongo)"
         echo ""
         echo -e "${C_INFO}▎E · 应急与恢复${C_RST}"
         echo -e "  ${C_WARN}e1${C_RST} 🚨 应急检查 (被黑排查)"
@@ -2879,6 +2927,7 @@ home_page() {
             d3) page_ops_network ;;
             d4) page_toolbox ;;
             d5) page_ops_cloud ;;
+            d6) page_ops_database ;;
             e1) page_emergency ;;
             e2) page_emergency_perf ;;
             z1) secure_vps_alias_on ;;

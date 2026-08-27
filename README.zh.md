@@ -36,7 +36,7 @@ wget -O vps_security_enhance.sh https://raw.githubusercontent.com/0x10debug/vps-
 | L0 | 合规审计（CIS Benchmark、STIG） | CIS + STIG 审计脚本已加入 |
 | L1 | 容器与 Kubernetes 安全 | Docker 审计 + Dockerfile 加固 + K8s 审计 + 运行时安全（Falco/Tetragon）已加入 |
 | L2 | 云平台 CIS 基线（AWS/GCP/Azure） | AWS + GCP + Azure CIS 基线审计已加入 |
-| L3 | 数据安全（数据库加固、大数据 SSL/审计） | 规划中（Phase 5） |
+| L3 | 数据安全（数据库加固、大数据 SSL/审计） | 数据库加固（MySQL/PG/Redis/Mongo）已加入 |
 | L4 | 网络与边界（零信任、WAF） | 规划中（Phase 6） |
 | L5 | 密钥与证书安全（TLS 生命周期、密钥扫描） | 规划中（Phase 7） |
 | L6 | 检测与响应（CrowdSec、应急取证） | CrowdSec 已集成到 B3；完整部署规划中（Phase 8） |
@@ -65,7 +65,7 @@ wget -O vps_security_enhance.sh https://raw.githubusercontent.com/0x10debug/vps-
 
 ## 配套手册
 
-13 章场景驱动手册，按安全层次组织，每章遵循"问题 → 排查 → 修复 → 验证"闭环：
+14 章场景驱动手册，按安全层次组织，每章遵循"问题 → 排查 → 修复 → 验证"闭环：
 
 | 章节 | 主题 | 安全视角 |
 |---|---|---|
@@ -82,6 +82,7 @@ wget -O vps_security_enhance.sh https://raw.githubusercontent.com/0x10debug/vps-
 | [11](handbook/11-k8s-security.md) | Kubernetes 安全审计 | CIS Kubernetes Benchmark 审计（60+ 检查项，控制平面 + worker + 策略 + 工作负载） |
 | [12](handbook/12-runtime-security.md) | 运行时安全 | Falco + Tetragon 基于 eBPF 的运行时检测与强制执行 |
 | [13](handbook/13-cloud-cis-baseline.md) | 云平台 CIS 基线 | AWS + GCP + Azure CIS Foundations Benchmark 审计（每云 40+ 检查项） |
+| [14](handbook/14-database-hardening.md) | 数据库加固 | MySQL + PostgreSQL + Redis + MongoDB CIS 基线审计 + 加固配置生成 |
 
 ## 速查卡
 
