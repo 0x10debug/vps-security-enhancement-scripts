@@ -2581,6 +2581,64 @@ db_hardening_run() {
     wait_key
 }
 
+page_ops_bigdata() {
+    while true; do
+        clear
+        echo -e "${C_OK}═══════════════════${C_RST}"
+        echo -e "${C_OK}     大数据安全       ${C_RST}"
+        echo -e "${C_OK}═══════════════════${C_RST}"
+        echo -e "  ${C_WARN}1.${C_RST} 📊 大数据安全审计 (Hadoop/Spark, 只读)"
+        echo -e "  ${C_WARN}2.${C_RST} 🔐 生成 SSL 证书 (CA + 服务端 + 客户端)"
+        echo -e "  ${C_WARN}3.${C_RST} 📋 生成 Hadoop SSL 配置"
+        echo -e "  ${C_WARN}4.${C_RST} 📋 生成 Kafka SSL 配置"
+        echo -e "  ${C_WARN}5.${C_RST} 📋 生成 HBase SSL 配置"
+        echo -e "  ${C_WARN}6.${C_RST} 📋 生成 Cassandra SSL 配置"
+        echo -e "  ${C_WARN}0.${C_RST} 返回"
+        echo
+        local pick
+        read -r -p "❯ 选择 [0-6]: " pick
+        case $pick in
+            1) bigdata_run "--audit" ;;
+            2) bigdata_run "--generate" ;;
+            3) bigdata_run "--hadoop" ;;
+            4) bigdata_run "--kafka" ;;
+            5) bigdata_run "--hbase" ;;
+            6) bigdata_run "--cassandra" ;;
+            0) break ;;
+            *) echo -e "${C_FAIL}无效输入${C_RST}"; sleep 1 ;;
+        esac
+    done
+}
+
+bigdata_run() {
+    local mode="$1"
+    local script_dir
+    script_dir=$(dirname "$(readlink -f "$0" 2>/dev/null || echo "$0")")
+    local bd_script
+    if [ "$mode" = "--audit" ]; then
+        bd_script="$script_dir/scripts/bigdata_security_audit.sh"
+    else
+        bd_script="$script_dir/scripts/bigdata_ssl_setup.sh"
+    fi
+    if [ ! -f "$bd_script" ]; then
+        if [ "$mode" = "--audit" ]; then
+            bd_script="/usr/local/share/secure-vps/scripts/bigdata_security_audit.sh"
+        else
+            bd_script="/usr/local/share/secure-vps/scripts/bigdata_ssl_setup.sh"
+        fi
+    fi
+    if [ ! -f "$bd_script" ]; then
+        echo -e "${C_FAIL}找不到大数据安全脚本${C_RST}"
+        echo -e "${C_INFO}请从 repo 运行, 或确保全局安装完整。${C_RST}"
+        wait_key; return
+    fi
+    echo -e "${C_WARN}>>> 大数据安全 <<<${C_RST}"
+    echo -e "${C_INFO}审计模式为只读, 配置生成不直接修改运行中的服务。${C_RST}"
+    echo ""
+    bash "$bd_script" "$mode"
+    wait_key
+}
+
 page_emergency_perf() {
     while true; do
         clear
@@ -2886,6 +2944,7 @@ home_page() {
         echo -e "  ${C_WARN}d4${C_RST} 🧰 系统工具 (档案/时区/DNS/清理)"
         echo -e "  ${C_WARN}d5${C_RST} ☁️ 云安全 (AWS/GCP/Azure CIS 基线)"
         echo -e "  ${C_WARN}d6${C_RST} 🗄️ 数据库安全 (MySQL/PG/Redis/Mongo)"
+        echo -e "  ${C_WARN}d7${C_RST} 📊 大数据安全 (Hadoop/Spark SSL+审计)"
         echo ""
         echo -e "${C_INFO}▎E · 应急与恢复${C_RST}"
         echo -e "  ${C_WARN}e1${C_RST} 🚨 应急检查 (被黑排查)"
@@ -2928,6 +2987,7 @@ home_page() {
             d4) page_toolbox ;;
             d5) page_ops_cloud ;;
             d6) page_ops_database ;;
+            d7) page_ops_bigdata ;;
             e1) page_emergency ;;
             e2) page_emergency_perf ;;
             z1) secure_vps_alias_on ;;
