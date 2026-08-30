@@ -37,7 +37,7 @@ The 7-layer architecture (L0 → L6) guides the iteration plan. Each layer maps 
 | L1 | Container & Kubernetes security | Docker audit + Dockerfile hardener + K8s audit + runtime security (Falco/Tetragon) added |
 | L2 | Cloud platform CIS baselines (AWS/GCP/Azure) | AWS + GCP + Azure CIS baseline audit added |
 | L3 | Data security (database hardening, big-data SSL/audit) | Database hardening + Big data SSL setup + Big data security audit added |
-| L4 | Network & perimeter (zero-trust, WAF) | Planned (Phase 6) |
+| L4 | Network & perimeter (zero-trust, WAF) | Zero trust (WireGuard + Headscale) + WAF (Coraza + CRS v4) added |
 | L5 | Key & certificate security (TLS lifecycle, secret scanning) | Planned (Phase 7) |
 | L6 | Detection & response (CrowdSec, incident triage) | CrowdSec integrated in B3; full deployment planned (Phase 8) |
 
@@ -65,7 +65,7 @@ See [`dev-docs/0015`](https://github.com/0x10debug/vps-security-enhancement-scri
 
 ## Handbook (Included)
 
-15 scenario-driven chapters organized by security layer. Each follows "Problem → Investigate → Fix → Verify":
+17 scenario-driven chapters organized by security layer. Each follows "Problem → Investigate → Fix → Verify":
 
 | Chapter | Topic | Security Angle |
 |---|---|---|
@@ -84,6 +84,8 @@ See [`dev-docs/0015`](https://github.com/0x10debug/vps-security-enhancement-scri
 | [13](handbook/13-cloud-cis-baseline.md) | Cloud CIS Baseline | AWS + GCP + Azure CIS Foundations Benchmark audit (40+ checks per provider) |
 | [14](handbook/14-database-hardening.md) | Database Hardening | MySQL + PostgreSQL + Redis + MongoDB CIS benchmark audit + hardened config generation |
 | [15](handbook/15-bigdata-security.md) | Big Data Security | Hadoop/Kafka/HBase/Cassandra SSL/TLS setup + Hadoop/Spark security audit |
+| [16](handbook/16-network-zerotrust.md) | Network Zero Trust | WireGuard + Headscale mesh VPN, ACL policy, CrowdSec integration, GeoIP filtering |
+| [17](handbook/17-waf-deployment.md) | WAF Deployment | Coraza + OWASP CRS v4, Caddy/Nginx/HAProxy integration, rule tuning, false positive handling |
 
 ## Cheatsheets
 
