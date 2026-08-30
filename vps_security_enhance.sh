@@ -2639,6 +2639,98 @@ bigdata_run() {
     wait_key
 }
 
+page_ops_zerotrust() {
+    while true; do
+        clear
+        echo -e "${C_OK}═══════════════════${C_RST}"
+        echo -e "${C_OK}    零信任网络       ${C_RST}"
+        echo -e "${C_OK}═══════════════════${C_RST}"
+        echo -e "  ${C_WARN}1.${C_RST} 🛡️ 审计零信任配置 (只读)"
+        echo -e "  ${C_WARN}2.${C_RST} 📦 安装 WireGuard"
+        echo -e "  ${C_WARN}3.${C_RST} 📦 安装 Headscale"
+        echo -e "  ${C_WARN}4.${C_RST} 📋 生成 ACL 配置"
+        echo -e "  ${C_WARN}5.${C_RST} 📋 生成 CrowdSec 集成"
+        echo -e "  ${C_WARN}6.${C_RST} 📋 生成 GeoIP 过滤"
+        echo -e "  ${C_WARN}0.${C_RST} 返回"
+        echo
+        local pick
+        read -r -p "❯ 选择 [0-6]: " pick
+        case $pick in
+            1) zt_run "--audit" ;;
+            2) zt_run "--install-wireguard" ;;
+            3) zt_run "--install-headscale" ;;
+            4) zt_run "--acl" ;;
+            5) zt_run "--crowdsec" ;;
+            6) zt_run "--geoip" ;;
+            0) break ;;
+            *) echo -e "${C_FAIL}无效输入${C_RST}"; sleep 1 ;;
+        esac
+    done
+}
+
+zt_run() {
+    local mode="$1"
+    local script_dir
+    script_dir=$(dirname "$(readlink -f "$0" 2>/dev/null || echo "$0")")
+    local zt_script="$script_dir/scripts/zerotrust_setup.sh"
+    [ ! -f "$zt_script" ] && zt_script="/usr/local/share/secure-vps/scripts/zerotrust_setup.sh"
+    if [ ! -f "$zt_script" ]; then
+        echo -e "${C_FAIL}找不到零信任脚本${C_RST}"
+        wait_key; return
+    fi
+    echo -e "${C_WARN}>>> 零信任网络 <<<${C_RST}"
+    echo -e "${C_INFO}审计模式为只读, 安装/配置生成不直接修改运行中的服务。${C_RST}"
+    echo ""
+    bash "$zt_script" "$mode"
+    wait_key
+}
+
+page_ops_waf() {
+    while true; do
+        clear
+        echo -e "${C_OK}═══════════════════${C_RST}"
+        echo -e "${C_OK}    WAF 部署         ${C_RST}"
+        echo -e "${C_OK}═══════════════════${C_RST}"
+        echo -e "  ${C_WARN}1.${C_RST} 🧱 审计 WAF 配置 (只读)"
+        echo -e "  ${C_WARN}2.${C_RST} 📦 安装 Coraza + CRS v4"
+        echo -e "  ${C_WARN}3.${C_RST} 📋 生成 Caddy + Coraza 配置"
+        echo -e "  ${C_WARN}4.${C_RST} 📋 生成 Nginx + Coraza 配置"
+        echo -e "  ${C_WARN}5.${C_RST} 📋 生成 HAProxy + Coraza 配置"
+        echo -e "  ${C_WARN}6.${C_RST} 📋 生成规则调优配置"
+        echo -e "  ${C_WARN}0.${C_RST} 返回"
+        echo
+        local pick
+        read -r -p "❯ 选择 [0-6]: " pick
+        case $pick in
+            1) waf_run "--audit" ;;
+            2) waf_run "--install" ;;
+            3) waf_run "--caddy" ;;
+            4) waf_run "--nginx" ;;
+            5) waf_run "--haproxy" ;;
+            6) waf_run "--tune" ;;
+            0) break ;;
+            *) echo -e "${C_FAIL}无效输入${C_RST}"; sleep 1 ;;
+        esac
+    done
+}
+
+waf_run() {
+    local mode="$1"
+    local script_dir
+    script_dir=$(dirname "$(readlink -f "$0" 2>/dev/null || echo "$0")")
+    local waf_script="$script_dir/scripts/waf_setup.sh"
+    [ ! -f "$waf_script" ] && waf_script="/usr/local/share/secure-vps/scripts/waf_setup.sh"
+    if [ ! -f "$waf_script" ]; then
+        echo -e "${C_FAIL}找不到 WAF 脚本${C_RST}"
+        wait_key; return
+    fi
+    echo -e "${C_WARN}>>> WAF 部署 <<<${C_RST}"
+    echo -e "${C_INFO}审计模式为只读, 配置生成不直接修改运行中的反代。${C_RST}"
+    echo ""
+    bash "$waf_script" "$mode"
+    wait_key
+}
+
 page_emergency_perf() {
     while true; do
         clear
@@ -2930,6 +3022,8 @@ home_page() {
         echo -e "  ${C_WARN}b1${C_RST} 🔐 SSH 与登录"
         echo -e "  ${C_WARN}b2${C_RST} 🧱 防火墙"
         echo -e "  ${C_WARN}b3${C_RST} 🚫 入侵封禁 (Fail2Ban / CrowdSec)"
+        echo -e "  ${C_WARN}b8${C_RST} 🛡️ 零信任网络 (WireGuard/Headscale)"
+        echo -e "  ${C_WARN}b9${C_RST} 🧱 WAF 部署 (Coraza/CRS v4)"
         echo ""
         echo -e "${C_INFO}▎C · 纵深防御${C_RST}"
         echo -e "  ${C_WARN}c1${C_RST} 🩺 基线体检 (只读)"
@@ -2988,6 +3082,8 @@ home_page() {
             d5) page_ops_cloud ;;
             d6) page_ops_database ;;
             d7) page_ops_bigdata ;;
+            b8) page_ops_zerotrust ;;
+            b9) page_ops_waf ;;
             e1) page_emergency ;;
             e2) page_emergency_perf ;;
             z1) secure_vps_alias_on ;;
