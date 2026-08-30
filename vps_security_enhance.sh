@@ -2731,6 +2731,48 @@ waf_run() {
     wait_key
 }
 
+page_ops_tls() {
+    while true; do
+        clear
+        echo -e "${C_OK}═══════════════════${C_RST}"
+        echo -e "${C_OK}   TLS 证书生命周期  ${C_RST}"
+        echo -e "${C_OK}═══════════════════${C_RST}"
+        echo -e "  ${C_WARN}1.${C_RST} 🛡️ 审计 TLS 配置 (只读)"
+        echo -e "  ${C_WARN}2.${C_RST} 📦 安装 acme.sh"
+        echo -e "  ${C_WARN}3.${C_RST} 📊 监控证书过期"
+        echo -e "  ${C_WARN}4.${C_RST} 🔄 续期所有证书"
+        echo -e "  ${C_WARN}0.${C_RST} 返回"
+        echo
+        local pick
+        read -r -p "❯ 选择 [0-4]: " pick
+        case $pick in
+            1) tls_run "--audit" ;;
+            2) tls_run "--install" ;;
+            3) tls_run "--monitor" ;;
+            4) tls_run "--renew" ;;
+            0) break ;;
+            *) echo -e "${C_FAIL}无效输入${C_RST}"; sleep 1 ;;
+        esac
+    done
+}
+
+tls_run() {
+    local mode="$1"
+    local script_dir
+    script_dir=$(dirname "$(readlink -f "$0" 2>/dev/null || echo "$0")")
+    local tls_script="$script_dir/scripts/tls_lifecycle.sh"
+    [ ! -f "$tls_script" ] && tls_script="/usr/local/share/secure-vps/scripts/tls_lifecycle.sh"
+    if [ ! -f "$tls_script" ]; then
+        echo -e "${C_FAIL}找不到 TLS 脚本${C_RST}"
+        wait_key; return
+    fi
+    echo -e "${C_WARN}>>> TLS 证书生命周期 <<<${C_RST}"
+    echo -e "${C_INFO}审计模式为只读, 安装/续期/监控不直接修改运行中的反代。${C_RST}"
+    echo ""
+    bash "$tls_script" "$mode"
+    wait_key
+}
+
 page_emergency_perf() {
     while true; do
         clear
@@ -3024,6 +3066,7 @@ home_page() {
         echo -e "  ${C_WARN}b3${C_RST} 🚫 入侵封禁 (Fail2Ban / CrowdSec)"
         echo -e "  ${C_WARN}b8${C_RST} 🛡️ 零信任网络 (WireGuard/Headscale)"
         echo -e "  ${C_WARN}b9${C_RST} 🧱 WAF 部署 (Coraza/CRS v4)"
+        echo -e "  ${C_WARN}b10${C_RST} 🔑 TLS 证书生命周期 (acme.sh)"
         echo ""
         echo -e "${C_INFO}▎C · 纵深防御${C_RST}"
         echo -e "  ${C_WARN}c1${C_RST} 🩺 基线体检 (只读)"
@@ -3084,6 +3127,7 @@ home_page() {
             d7) page_ops_bigdata ;;
             b8) page_ops_zerotrust ;;
             b9) page_ops_waf ;;
+            b10) page_ops_tls ;;
             e1) page_emergency ;;
             e2) page_emergency_perf ;;
             z1) secure_vps_alias_on ;;

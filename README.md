@@ -38,7 +38,7 @@ The 7-layer architecture (L0 → L6) guides the iteration plan. Each layer maps 
 | L2 | Cloud platform CIS baselines (AWS/GCP/Azure) | AWS + GCP + Azure CIS baseline audit added |
 | L3 | Data security (database hardening, big-data SSL/audit) | Database hardening + Big data SSL setup + Big data security audit added |
 | L4 | Network & perimeter (zero-trust, WAF) | Zero trust (WireGuard + Headscale) + WAF (Coraza + CRS v4) added |
-| L5 | Key & certificate security (TLS lifecycle, secret scanning) | Planned (Phase 7) |
+| L5 | Key & certificate security (TLS lifecycle, secret scanning) | TLS lifecycle (acme.sh, 29 DNS providers, ECC+RSA, auto-renew, deploy hooks, monitoring) added |
 | L6 | Detection & response (CrowdSec, incident triage) | CrowdSec integrated in B3; full deployment planned (Phase 8) |
 
 See [`dev-docs/0015`](https://github.com/0x10debug/vps-security-enhancement-scripts/blob/main/dev-docs/0015-vps-security-enhancement-scripts-branch-strategy.md) for the full branch strategy.
@@ -65,7 +65,7 @@ See [`dev-docs/0015`](https://github.com/0x10debug/vps-security-enhancement-scri
 
 ## Handbook (Included)
 
-17 scenario-driven chapters organized by security layer. Each follows "Problem → Investigate → Fix → Verify":
+18 scenario-driven chapters organized by security layer. Each follows "Problem → Investigate → Fix → Verify":
 
 | Chapter | Topic | Security Angle |
 |---|---|---|
@@ -86,6 +86,7 @@ See [`dev-docs/0015`](https://github.com/0x10debug/vps-security-enhancement-scri
 | [15](handbook/15-bigdata-security.md) | Big Data Security | Hadoop/Kafka/HBase/Cassandra SSL/TLS setup + Hadoop/Spark security audit |
 | [16](handbook/16-network-zerotrust.md) | Network Zero Trust | WireGuard + Headscale mesh VPN, ACL policy, CrowdSec integration, GeoIP filtering |
 | [17](handbook/17-waf-deployment.md) | WAF Deployment | Coraza + OWASP CRS v4, Caddy/Nginx/HAProxy integration, rule tuning, false positive handling |
+| [18](handbook/18-tls-automation.md) | TLS Automation | acme.sh lifecycle management, DNS-01 vs HTTP-01, 29 DNS providers, ECC/RSA, auto-renew, deploy hooks, monitoring |
 
 ## Cheatsheets
 
