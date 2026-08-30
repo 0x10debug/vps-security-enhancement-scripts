@@ -38,7 +38,7 @@ wget -O vps_security_enhance.sh https://raw.githubusercontent.com/0x10debug/vps-
 | L2 | 云平台 CIS 基线（AWS/GCP/Azure） | AWS + GCP + Azure CIS 基线审计已加入 |
 | L3 | 数据安全（数据库加固、大数据 SSL/审计） | 数据库加固 + 大数据 SSL 证书 + 大数据安全审计已加入 |
 | L4 | 网络与边界（零信任、WAF） | 零信任（WireGuard + Headscale）+ WAF（Coraza + CRS v4）已加入 |
-| L5 | 密钥与证书安全（TLS 生命周期、密钥扫描） | TLS 生命周期（acme.sh，29 个 DNS 提供商，ECC+RSA，自动续期，部署钩子，监控）已加入 |
+| L5 | 密钥与证书安全（TLS 生命周期、密钥扫描） | TLS 生命周期（acme.sh，29 个 DNS 提供商，ECC+RSA，自动续期，部署钩子，监控）+ 密钥扫描（gitleaks + trufflehog，git 历史，CI 集成）已加入 |
 | L6 | 检测与响应（CrowdSec、应急取证） | CrowdSec 已集成到 B3；完整部署规划中（Phase 8） |
 
 完整分支策略见 [`dev-docs/0015`](https://github.com/0x10debug/vps-security-enhancement-scripts/blob/main/dev-docs/0015-vps-security-enhancement-scripts-branch-strategy.md)。
@@ -65,7 +65,7 @@ wget -O vps_security_enhance.sh https://raw.githubusercontent.com/0x10debug/vps-
 
 ## 配套手册
 
-18 章场景驱动手册，按安全层次组织，每章遵循"问题 → 排查 → 修复 → 验证"闭环：
+19 章场景驱动手册，按安全层次组织，每章遵循"问题 → 排查 → 修复 → 验证"闭环：
 
 | 章节 | 主题 | 安全视角 |
 |---|---|---|
@@ -87,6 +87,7 @@ wget -O vps_security_enhance.sh https://raw.githubusercontent.com/0x10debug/vps-
 | [16](handbook/16-network-zerotrust.md) | 网络零信任 | WireGuard + Headscale 网状 VPN，ACL 策略，CrowdSec 集成，GeoIP 过滤 |
 | [17](handbook/17-waf-deployment.md) | WAF 部署 | Coraza + OWASP CRS v4，Caddy/Nginx/HAProxy 集成，规则调优，误报处理 |
 | [18](handbook/18-tls-automation.md) | TLS 自动化 | acme.sh 生命周期管理，DNS-01 vs HTTP-01，29 个 DNS 提供商，ECC/RSA，自动续期，部署钩子，监控 |
+| [19](handbook/19-secret-management.md) | 密钥管理 | gitleaks + trufflehog 扫描，git 历史审计，CI/pre-commit 集成，密钥泄露应急响应 |
 
 ## 速查卡
 

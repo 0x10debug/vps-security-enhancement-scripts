@@ -2773,6 +2773,52 @@ tls_run() {
     wait_key
 }
 
+page_ops_secret_scan() {
+    while true; do
+        clear
+        echo -e "${C_OK}═══════════════════${C_RST}"
+        echo -e "${C_OK}   密钥与秘密扫描     ${C_RST}"
+        echo -e "${C_OK}═══════════════════${C_RST}"
+        echo -e "  ${C_WARN}1.${C_RST} 🛡️ 审计密钥管理配置 (只读)"
+        echo -e "  ${C_WARN}2.${C_RST} 📦 安装 gitleaks + trufflehog"
+        echo -e "  ${C_WARN}3.${C_RST} 🔍 快速扫描 (gitleaks)"
+        echo -e "  ${C_WARN}4.${C_RST} 📜 扫描 git 历史"
+        echo -e "  ${C_WARN}5.${C_RST} 🏴 深度扫描 (trufflehog 验证)"
+        echo -e "  ${C_WARN}6.${C_RST} 📋 生成 CI/pre-commit 配置"
+        echo -e "  ${C_WARN}0.${C_RST} 返回"
+        echo
+        local pick
+        read -r -p "❯ 选择 [0-6]: " pick
+        case $pick in
+            1) secret_run "--audit" ;;
+            2) secret_run "--install" ;;
+            3) secret_run "--scan" ;;
+            4) secret_run "--scan-git" ;;
+            5) secret_run "--deep" ;;
+            6) secret_run "--ci" ;;
+            0) break ;;
+            *) echo -e "${C_FAIL}无效输入${C_RST}"; sleep 1 ;;
+        esac
+    done
+}
+
+secret_run() {
+    local mode="$1"
+    local script_dir
+    script_dir=$(dirname "$(readlink -f "$0" 2>/dev/null || echo "$0")")
+    local secret_script="$script_dir/scripts/secret_scan.sh"
+    [ ! -f "$secret_script" ] && secret_script="/usr/local/share/secure-vps/scripts/secret_scan.sh"
+    if [ ! -f "$secret_script" ]; then
+        echo -e "${C_FAIL}找不到密钥扫描脚本${C_RST}"
+        wait_key; return
+    fi
+    echo -e "${C_WARN}>>> 密钥与秘密扫描 <<<${C_RST}"
+    echo -e "${C_INFO}扫描为只读, 不修改任何文件。深度扫描会向 API 发送验证请求。${C_RST}"
+    echo ""
+    bash "$secret_script" "$mode"
+    wait_key
+}
+
 page_emergency_perf() {
     while true; do
         clear
@@ -3067,6 +3113,7 @@ home_page() {
         echo -e "  ${C_WARN}b8${C_RST} 🛡️ 零信任网络 (WireGuard/Headscale)"
         echo -e "  ${C_WARN}b9${C_RST} 🧱 WAF 部署 (Coraza/CRS v4)"
         echo -e "  ${C_WARN}b10${C_RST} 🔑 TLS 证书生命周期 (acme.sh)"
+        echo -e "  ${C_WARN}b11${C_RST} 🕵️ 密钥与秘密扫描 (gitleaks/trufflehog)"
         echo ""
         echo -e "${C_INFO}▎C · 纵深防御${C_RST}"
         echo -e "  ${C_WARN}c1${C_RST} 🩺 基线体检 (只读)"
@@ -3128,6 +3175,7 @@ home_page() {
             b8) page_ops_zerotrust ;;
             b9) page_ops_waf ;;
             b10) page_ops_tls ;;
+            b11) page_ops_secret_scan ;;
             e1) page_emergency ;;
             e2) page_emergency_perf ;;
             z1) secure_vps_alias_on ;;
