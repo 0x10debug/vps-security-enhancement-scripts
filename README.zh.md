@@ -24,7 +24,7 @@ wget -O vps_security_enhance.sh https://raw.githubusercontent.com/0x10debug/vps-
 | **B · 访问安全** | L4 网络 | SSH 加固、防火墙（UFW/Firewalld）、入侵封禁（Fail2Ban + CrowdSec，含 iptables/nginx/Cloudflare bouncer） |
 | **C · 纵深防御** | L0-L3 | 基线体检、内核加固、审计与完整性（auditd/AIDE/Rkhunter/Lynis）、密码与权限 |
 | **D · 安全运维** | — | 容器安全（Docker/Portainer/Watchtower/1Panel）、安全监控（Uptime Kuma）、网络诊断、系统工具 |
-| **E · 应急与恢复** | L6 检测 | 应急检查（被黑排查、登录记录、可疑 cron）、性能与资源（BBR/Swap/跑分） |
+| **E · 应急与恢复** | L6 检测 | 应急检查（被黑排查、登录记录、可疑 cron）、应急取证采集（只读、证据链）、性能与资源（BBR/Swap/跑分） |
 | **Z · 维护** | — | 全局命令、自更新 |
 
 ### 安全层次路线图
@@ -39,7 +39,7 @@ wget -O vps_security_enhance.sh https://raw.githubusercontent.com/0x10debug/vps-
 | L3 | 数据安全（数据库加固、大数据 SSL/审计） | 数据库加固 + 大数据 SSL 证书 + 大数据安全审计已加入 |
 | L4 | 网络与边界（零信任、WAF） | 零信任（WireGuard + Headscale）+ WAF（Coraza + CRS v4）已加入 |
 | L5 | 密钥与证书安全（TLS 生命周期、密钥扫描） | TLS 生命周期（acme.sh，29 个 DNS 提供商，ECC+RSA，自动续期，部署钩子，监控）+ 密钥扫描（gitleaks + trufflehog，git 历史，CI 集成）已加入 |
-| L6 | 检测与响应（CrowdSec、应急取证） | CrowdSec 部署（安装、场景、iptables/nginx/Cloudflare bouncer、email/webhook/Slack/Discord 告警、Hub 管理、15 项审计）已加入 |
+| L6 | 检测与响应（CrowdSec、应急取证） | CrowdSec 部署（安装、场景、iptables/nginx/Cloudflare bouncer、email/webhook/Slack/Discord 告警、Hub 管理、15 项审计）+ 应急取证采集（只读、按易失性顺序、证据链、16 项审计、tar.gz 归档 + 清单）已加入 |
 
 完整分支策略见 [`dev-docs/0015`](https://github.com/0x10debug/vps-security-enhancement-scripts/blob/main/dev-docs/0015-vps-security-enhancement-scripts-branch-strategy.md)。
 
@@ -65,7 +65,7 @@ wget -O vps_security_enhance.sh https://raw.githubusercontent.com/0x10debug/vps-
 
 ## 配套手册
 
-20 章场景驱动手册，按安全层次组织，每章遵循"问题 → 排查 → 修复 → 验证"闭环：
+21 章场景驱动手册，按安全层次组织，每章遵循"问题 → 排查 → 修复 → 验证"闭环：
 
 | 章节 | 主题 | 安全视角 |
 |---|---|---|
@@ -89,10 +89,11 @@ wget -O vps_security_enhance.sh https://raw.githubusercontent.com/0x10debug/vps-
 | [18](handbook/18-tls-automation.md) | TLS 自动化 | acme.sh 生命周期管理，DNS-01 vs HTTP-01，29 个 DNS 提供商，ECC/RSA，自动续期，部署钩子，监控 |
 | [19](handbook/19-secret-management.md) | 密钥管理 | gitleaks + trufflehog 扫描，git 历史审计，CI/pre-commit 集成，密钥泄露应急响应 |
 | [20](handbook/20-crowdsec-deployment.md) | CrowdSec 部署 | CrowdSec vs fail2ban，引擎+bouncer+场景架构，iptables/nginx/Cloudflare bouncer，email/webhook/Slack/Discord 告警，集中管理 Console，15 项审计 |
+| [21](handbook/21-incident-response-forensics.md) | 应急响应与取证 | NIST 应急生命周期、取证采集方法论、易失性顺序、证据链与保管、封控策略、事后分析与报告 |
 
 ## 速查卡
 
-4 张一页纸可打印参考卡：
+5 张一页纸可打印参考卡：
 
 | 速查卡 | 内容 |
 |---|---|
@@ -100,6 +101,7 @@ wget -O vps_security_enhance.sh https://raw.githubusercontent.com/0x10debug/vps-
 | [container-security-commands.md](cheatsheet/container-security-commands.md) | 容器安全命令 |
 | [systemd-commands.md](cheatsheet/systemd-commands.md) | 服务管理、journalctl、targets、timers |
 | [security-troubleshooting-tree.md](cheatsheet/security-troubleshooting-tree.md) | 7 棵决策树：SSH 连不上、服务不可达、磁盘满、CPU 高、容器启动失败、网站慢、可疑活动 |
+| [forensics-commands.md](cheatsheet/forensics-commands.md) | 取证采集：进程、网络、文件系统、日志、内存、持久化、证据收集 |
 
 ## 脚本 vs 模块化：用哪个？
 

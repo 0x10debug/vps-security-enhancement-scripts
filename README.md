@@ -24,7 +24,7 @@ The script (`vps_security_enhance.sh`) is organized by **security layers**, not 
 | **B · Access Security** | L4 Network | SSH hardening, firewall (UFW/Firewalld), intrusion ban (Fail2Ban + CrowdSec with iptables/nginx/Cloudflare bouncers) |
 | **C · Defense in Depth** | L0-L3 | Baseline scan, kernel hardening, audit & integrity (auditd/AIDE/Rkhunter/Lynis), password & access control |
 | **D · Secure Ops** | — | Container security (Docker/Portainer/Watchtower/1Panel), security monitoring (Uptime Kuma), network diagnostics, system tools |
-| **E · Incident & Recovery** | L6 Detection | Emergency triage (compromise check, login history, suspicious cron), performance & resource (BBR/swap/bench) |
+| **E · Incident & Recovery** | L6 Detection | Emergency triage (compromise check, login history, suspicious cron), forensic triage collection (read-only, evidence chain), performance & resource (BBR/swap/bench) |
 | **Z · Maintenance** | — | Global command, self-update |
 
 ### Security Layer Roadmap
@@ -39,7 +39,7 @@ The 7-layer architecture (L0 → L6) guides the iteration plan. Each layer maps 
 | L3 | Data security (database hardening, big-data SSL/audit) | Database hardening + Big data SSL setup + Big data security audit added |
 | L4 | Network & perimeter (zero-trust, WAF) | Zero trust (WireGuard + Headscale) + WAF (Coraza + CRS v4) added |
 | L5 | Key & certificate security (TLS lifecycle, secret scanning) | TLS lifecycle (acme.sh, 29 DNS providers, ECC+RSA, auto-renew, deploy hooks, monitoring) + Secret scanning (gitleaks + trufflehog, git history, CI integration) added |
-| L6 | Detection & response (CrowdSec, incident triage) | CrowdSec deployment (install, scenarios, iptables/nginx/Cloudflare bouncers, email/webhook/Slack/Discord alerts, hub management, 15-check audit) added |
+| L6 | Detection & response (CrowdSec, incident triage) | CrowdSec deployment (install, scenarios, iptables/nginx/Cloudflare bouncers, email/webhook/Slack/Discord alerts, hub management, 15-check audit) + Incident triage forensic collection (read-only, order-of-volatility, evidence chain, 16-check audit, tar.gz archive + manifest) added |
 
 See [`dev-docs/0015`](https://github.com/0x10debug/vps-security-enhancement-scripts/blob/main/dev-docs/0015-vps-security-enhancement-scripts-branch-strategy.md) for the full branch strategy.
 
@@ -65,7 +65,7 @@ See [`dev-docs/0015`](https://github.com/0x10debug/vps-security-enhancement-scri
 
 ## Handbook (Included)
 
-20 scenario-driven chapters organized by security layer. Each follows "Problem → Investigate → Fix → Verify":
+21 scenario-driven chapters organized by security layer. Each follows "Problem → Investigate → Fix → Verify":
 
 | Chapter | Topic | Security Angle |
 |---|---|---|
@@ -89,10 +89,11 @@ See [`dev-docs/0015`](https://github.com/0x10debug/vps-security-enhancement-scri
 | [18](handbook/18-tls-automation.md) | TLS Automation | acme.sh lifecycle management, DNS-01 vs HTTP-01, 29 DNS providers, ECC/RSA, auto-renew, deploy hooks, monitoring |
 | [19](handbook/19-secret-management.md) | Secret Management | gitleaks + trufflehog scanning, git history audit, CI/pre-commit integration, key leak emergency response |
 | [20](handbook/20-crowdsec-deployment.md) | CrowdSec Deployment | CrowdSec vs fail2ban, engine + bouncer + scenario architecture, iptables/nginx/Cloudflare bouncers, email/webhook/Slack/Discord alerts, centralized console, 15-check audit |
+| [21](handbook/21-incident-response-forensics.md) | Incident Response & Forensics | NIST incident lifecycle, forensic triage methodology, order of volatility, evidence chain of custody, containment strategies, post-incident analysis |
 
 ## Cheatsheets
 
-4 one-page printable reference cards:
+5 one-page printable reference cards:
 
 | Cheatsheet | Content |
 |---|---|
@@ -100,6 +101,7 @@ See [`dev-docs/0015`](https://github.com/0x10debug/vps-security-enhancement-scri
 | [container-security-commands.md](cheatsheet/container-security-commands.md) | Container security commands |
 | [systemd-commands.md](cheatsheet/systemd-commands.md) | Service management, journalctl, targets, timers |
 | [security-troubleshooting-tree.md](cheatsheet/security-troubleshooting-tree.md) | 7 decision trees: SSH fail, service unreachable, disk full, high CPU, container fail, slow website, suspicious activity |
+| [forensics-commands.md](cheatsheet/forensics-commands.md) | Forensic triage: process, network, filesystem, log, memory, persistence, evidence collection |
 
 ## Script vs Modular: Which to Use?
 

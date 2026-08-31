@@ -2351,15 +2351,17 @@ page_emergency() {
         echo -e "  ${C_WARN}2.${C_RST} 👥 最近登录记录"
         echo -e "  ${C_WARN}3.${C_RST} ⏰ 可疑定时任务"
         echo -e "  ${C_WARN}4.${C_RST} 📖 参阅应急手册 (handbook/03-incident-response.md)"
+        echo -e "  ${C_WARN}5.${C_RST} 🔍 应急取证采集 (incident_triage.sh)"
         echo -e "  ${C_WARN}0.${C_RST} 返回"
         echo
         local pick
-        read -r -p "❯ 选择 [0-4]: " pick
+        read -r -p "❯ 选择 [0-5]: " pick
         case $pick in
             1) baseline_scan ;;
             2) emergency_logins ;;
             3) emergency_cron ;;
             4) echo -e "${C_INFO}请参阅 handbook/03-incident-response.md${C_RST}"; wait_key ;;
+            5) incident_triage_menu ;;
             0) break ;;
             *) echo -e "${C_FAIL}无效输入${C_RST}"; sleep 1 ;;
         esac
@@ -2398,6 +2400,49 @@ emergency_cron() {
     done
     echo ""
     echo -e "${C_WARN}检查项: 未知脚本路径、可疑下载命令、非标准时段任务${C_RST}"
+    wait_key
+}
+
+incident_triage_menu() {
+    while true; do
+        clear
+        echo -e "${C_OK}═══════════════════${C_RST}"
+        echo -e "${C_OK}   应急取证采集      ${C_RST}"
+        echo -e "${C_OK}═══════════════════${C_RST}"
+        echo -e "  ${C_WARN}1.${C_RST} 📦 完整采集 (collect, 只读)"
+        echo -e "  ${C_WARN}2.${C_RST} ⚡ 快速概览 (quick)"
+        echo -e "  ${C_WARN}3.${C_RST} 🛡️ 只读审计 (16 检查项)"
+        echo -e "  ${C_WARN}4.${C_RST} 🔍 分析归档 (analyze)"
+        echo -e "  ${C_WARN}5.${C_RST} 📋 生成报告 (report)"
+        echo -e "  ${C_WARN}0.${C_RST} 返回"
+        echo
+        local pick sub
+        read -r -p "❯ 选择 [0-5]: " pick
+        case $pick in
+            1) incident_triage_run collect ;;
+            2) incident_triage_run quick ;;
+            3) incident_triage_run audit ;;
+            4) read -r -p "归档路径: " sub; incident_triage_run analyze "$sub" ;;
+            5) read -r -p "归档路径: " sub; incident_triage_run report "$sub" ;;
+            0) break ;;
+            *) echo -e "${C_FAIL}无效输入${C_RST}"; sleep 1 ;;
+        esac
+    done
+}
+
+incident_triage_run() {
+    local script_dir
+    script_dir=$(dirname "$(readlink -f "$0" 2>/dev/null || echo "$0")")
+    local triage_script="$script_dir/scripts/incident_triage.sh"
+    [ ! -f "$triage_script" ] && triage_script="/usr/local/share/secure-vps/scripts/incident_triage.sh"
+    if [ ! -f "$triage_script" ]; then
+        echo -e "${C_FAIL}找不到 incident_triage.sh${C_RST}"
+        wait_key; return
+    fi
+    echo -e "${C_WARN}>>> 应急取证采集 <<<${C_RST}"
+    echo -e "${C_INFO}采集为只读模式, 不修改系统。归档请复制到离线可信存储后再分析。${C_RST}"
+    echo ""
+    bash "$triage_script" "$@"
     wait_key
 }
 
