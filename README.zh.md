@@ -2,7 +2,7 @@
 
 以安全为核心的交互式 bash 脚本，配套场景驱动手册和速查卡。单文件、零依赖、一条命令启动——配一本真正的手册告诉你"为什么"，不只是"怎么做"。
 
-> 这是一个**活的仓库**：脚本和手册按安全方向持续扩展。当前版本以 2650 行交互式脚本 + 8 章手册 + 4 张速查卡为起点。后续迭代将加入 CIS/STIG 审计、容器/K8s 安全、云平台 CIS 基线、数据库加固、大数据 SSL、零信任、WAF、TLS 生命周期、密钥扫描、基于 CrowdSec 的应急响应。
+> 这是一个**活的仓库**：脚本和手册按安全方向持续扩展。当前版本以 3200 行交互式脚本 + 20 章手册 + 4 张速查卡为起点。后续迭代将逐层加深。
 
 ## 快速开始
 
@@ -21,7 +21,7 @@ wget -O vps_security_enhance.sh https://raw.githubusercontent.com/0x10debug/vps-
 | 分区 | 层次 | 功能 |
 |---|---|---|
 | **A · 快速通道** | — | 全量安全初始化（更新+防火墙+BBR+Swap+Fail2Ban+内核） |
-| **B · 访问安全** | L4 网络 | SSH 加固、防火墙（UFW/Firewalld）、入侵封禁（Fail2Ban + CrowdSec） |
+| **B · 访问安全** | L4 网络 | SSH 加固、防火墙（UFW/Firewalld）、入侵封禁（Fail2Ban + CrowdSec，含 iptables/nginx/Cloudflare bouncer） |
 | **C · 纵深防御** | L0-L3 | 基线体检、内核加固、审计与完整性（auditd/AIDE/Rkhunter/Lynis）、密码与权限 |
 | **D · 安全运维** | — | 容器安全（Docker/Portainer/Watchtower/1Panel）、安全监控（Uptime Kuma）、网络诊断、系统工具 |
 | **E · 应急与恢复** | L6 检测 | 应急检查（被黑排查、登录记录、可疑 cron）、性能与资源（BBR/Swap/跑分） |
@@ -39,7 +39,7 @@ wget -O vps_security_enhance.sh https://raw.githubusercontent.com/0x10debug/vps-
 | L3 | 数据安全（数据库加固、大数据 SSL/审计） | 数据库加固 + 大数据 SSL 证书 + 大数据安全审计已加入 |
 | L4 | 网络与边界（零信任、WAF） | 零信任（WireGuard + Headscale）+ WAF（Coraza + CRS v4）已加入 |
 | L5 | 密钥与证书安全（TLS 生命周期、密钥扫描） | TLS 生命周期（acme.sh，29 个 DNS 提供商，ECC+RSA，自动续期，部署钩子，监控）+ 密钥扫描（gitleaks + trufflehog，git 历史，CI 集成）已加入 |
-| L6 | 检测与响应（CrowdSec、应急取证） | CrowdSec 已集成到 B3；完整部署规划中（Phase 8） |
+| L6 | 检测与响应（CrowdSec、应急取证） | CrowdSec 部署（安装、场景、iptables/nginx/Cloudflare bouncer、email/webhook/Slack/Discord 告警、Hub 管理、15 项审计）已加入 |
 
 完整分支策略见 [`dev-docs/0015`](https://github.com/0x10debug/vps-security-enhancement-scripts/blob/main/dev-docs/0015-vps-security-enhancement-scripts-branch-strategy.md)。
 
@@ -65,7 +65,7 @@ wget -O vps_security_enhance.sh https://raw.githubusercontent.com/0x10debug/vps-
 
 ## 配套手册
 
-19 章场景驱动手册，按安全层次组织，每章遵循"问题 → 排查 → 修复 → 验证"闭环：
+20 章场景驱动手册，按安全层次组织，每章遵循"问题 → 排查 → 修复 → 验证"闭环：
 
 | 章节 | 主题 | 安全视角 |
 |---|---|---|
@@ -88,6 +88,7 @@ wget -O vps_security_enhance.sh https://raw.githubusercontent.com/0x10debug/vps-
 | [17](handbook/17-waf-deployment.md) | WAF 部署 | Coraza + OWASP CRS v4，Caddy/Nginx/HAProxy 集成，规则调优，误报处理 |
 | [18](handbook/18-tls-automation.md) | TLS 自动化 | acme.sh 生命周期管理，DNS-01 vs HTTP-01，29 个 DNS 提供商，ECC/RSA，自动续期，部署钩子，监控 |
 | [19](handbook/19-secret-management.md) | 密钥管理 | gitleaks + trufflehog 扫描，git 历史审计，CI/pre-commit 集成，密钥泄露应急响应 |
+| [20](handbook/20-crowdsec-deployment.md) | CrowdSec 部署 | CrowdSec vs fail2ban，引擎+bouncer+场景架构，iptables/nginx/Cloudflare bouncer，email/webhook/Slack/Discord 告警，集中管理 Console，15 项审计 |
 
 ## 速查卡
 

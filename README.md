@@ -2,7 +2,7 @@
 
 A security-first interactive bash script for VPS hardening, with a scenario-driven handbook and cheatsheets included. One script, zero dependencies, one command to start — plus a real handbook that tells you *why*, not just *how*.
 
-> This is a **living repo**: the script and handbook expand by security direction over time. The current release ships a 2650-line interactive script + 8-chapter handbook + 4 cheatsheets as the starting point. Future iterations add CIS/STIG audit, container/K8s security, cloud CIS baselines, database hardening, big-data SSL, zero-trust, WAF, TLS lifecycle, secret scanning, and CrowdSec-based incident response.
+> This is a **living repo**: the script and handbook expand by security direction over time. The current release ships a 3200-line interactive script + 20-chapter handbook + 4 cheatsheets. Future iterations add more depth per layer.
 
 ## Quick Start
 
@@ -21,7 +21,7 @@ The script (`vps_security_enhance.sh`) is organized by **security layers**, not 
 | Zone | Layer | Features |
 |---|---|---|
 | **A · Quick** | — | Full security init (update + firewall + BBR + swap + Fail2Ban + kernel) |
-| **B · Access Security** | L4 Network | SSH hardening, firewall (UFW/Firewalld), intrusion ban (Fail2Ban + CrowdSec) |
+| **B · Access Security** | L4 Network | SSH hardening, firewall (UFW/Firewalld), intrusion ban (Fail2Ban + CrowdSec with iptables/nginx/Cloudflare bouncers) |
 | **C · Defense in Depth** | L0-L3 | Baseline scan, kernel hardening, audit & integrity (auditd/AIDE/Rkhunter/Lynis), password & access control |
 | **D · Secure Ops** | — | Container security (Docker/Portainer/Watchtower/1Panel), security monitoring (Uptime Kuma), network diagnostics, system tools |
 | **E · Incident & Recovery** | L6 Detection | Emergency triage (compromise check, login history, suspicious cron), performance & resource (BBR/swap/bench) |
@@ -39,7 +39,7 @@ The 7-layer architecture (L0 → L6) guides the iteration plan. Each layer maps 
 | L3 | Data security (database hardening, big-data SSL/audit) | Database hardening + Big data SSL setup + Big data security audit added |
 | L4 | Network & perimeter (zero-trust, WAF) | Zero trust (WireGuard + Headscale) + WAF (Coraza + CRS v4) added |
 | L5 | Key & certificate security (TLS lifecycle, secret scanning) | TLS lifecycle (acme.sh, 29 DNS providers, ECC+RSA, auto-renew, deploy hooks, monitoring) + Secret scanning (gitleaks + trufflehog, git history, CI integration) added |
-| L6 | Detection & response (CrowdSec, incident triage) | CrowdSec integrated in B3; full deployment planned (Phase 8) |
+| L6 | Detection & response (CrowdSec, incident triage) | CrowdSec deployment (install, scenarios, iptables/nginx/Cloudflare bouncers, email/webhook/Slack/Discord alerts, hub management, 15-check audit) added |
 
 See [`dev-docs/0015`](https://github.com/0x10debug/vps-security-enhancement-scripts/blob/main/dev-docs/0015-vps-security-enhancement-scripts-branch-strategy.md) for the full branch strategy.
 
@@ -65,7 +65,7 @@ See [`dev-docs/0015`](https://github.com/0x10debug/vps-security-enhancement-scri
 
 ## Handbook (Included)
 
-19 scenario-driven chapters organized by security layer. Each follows "Problem → Investigate → Fix → Verify":
+20 scenario-driven chapters organized by security layer. Each follows "Problem → Investigate → Fix → Verify":
 
 | Chapter | Topic | Security Angle |
 |---|---|---|
@@ -88,6 +88,7 @@ See [`dev-docs/0015`](https://github.com/0x10debug/vps-security-enhancement-scri
 | [17](handbook/17-waf-deployment.md) | WAF Deployment | Coraza + OWASP CRS v4, Caddy/Nginx/HAProxy integration, rule tuning, false positive handling |
 | [18](handbook/18-tls-automation.md) | TLS Automation | acme.sh lifecycle management, DNS-01 vs HTTP-01, 29 DNS providers, ECC/RSA, auto-renew, deploy hooks, monitoring |
 | [19](handbook/19-secret-management.md) | Secret Management | gitleaks + trufflehog scanning, git history audit, CI/pre-commit integration, key leak emergency response |
+| [20](handbook/20-crowdsec-deployment.md) | CrowdSec Deployment | CrowdSec vs fail2ban, engine + bouncer + scenario architecture, iptables/nginx/Cloudflare bouncers, email/webhook/Slack/Discord alerts, centralized console, 15-check audit |
 
 ## Cheatsheets
 

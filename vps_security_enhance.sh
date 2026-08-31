@@ -1923,70 +1923,87 @@ page_intrusion() {
         echo -e "  ${C_WARN}2.${C_RST} 📋 Fail2Ban 状态与封禁名单"
         echo -e "  ${C_WARN}3.${C_RST} 📜 Fail2Ban 拦截日志"
         echo -e "  ${C_WARN}4.${C_RST} 🔄 重启 Fail2Ban"
-        echo -e "  ${C_WARN}5.${C_RST} 🛡 CrowdSec 安装 (现代替代)"
+        echo -e "  ${C_WARN}5.${C_RST} 🛡 CrowdSec 完整部署向导"
         echo -e "  ${C_WARN}6.${C_RST} 📋 CrowdSec 状态"
+        echo -e "  ${C_WARN}7.${C_RST} 🛡️ CrowdSec 审计 (只读)"
         echo -e "  ${C_WARN}0.${C_RST} 返回"
         echo
         local pick
-        read -r -p "❯ 选择 [0-6]: " pick
+        read -r -p "❯ 选择 [0-7]: " pick
         case $pick in
             1) f2b_deploy ;;
             2) f2b_report ;;
             3) f2b_log_tail ;;
             4) systemctl restart fail2ban; echo -e "${C_OK}已重启。${C_RST}"; wait_key ;;
-            5) crowdsec_deploy ;;
+            5) crowdsec_setup_run ;;
             6) crowdsec_status ;;
+            7) crowdsec_audit ;;
             0) break ;;
             *) echo -e "${C_FAIL}无效输入${C_RST}"; sleep 1 ;;
         esac
     done
 }
 
-crowdsec_deploy() {
-    echo -e "${C_WARN}>>> CrowdSec 部署 <<<${C_RST}"
-    if command -v cscli >/dev/null 2>&1; then
-        echo -e "${C_WARN}CrowdSec 已安装。${C_RST}"
+crowdsec_setup_run() {
+    local script_dir
+    script_dir=$(dirname "$(readlink -f "$0" 2>/dev/null || echo "$0")")
+    local cs_script="$script_dir/scripts/crowdsec_setup.sh"
+    [ ! -f "$cs_script" ] && cs_script="/usr/local/share/secure-vps/scripts/crowdsec_setup.sh"
+    if [ ! -f "$cs_script" ]; then
+        echo -e "${C_FAIL}找不到 CrowdSec 部署脚本${C_RST}"
         wait_key; return
     fi
-    echo -e "${C_INFO}CrowdSec = 行为分析 + 众包威胁情报 + 多层 bouncer${C_RST}"
-    echo -e "${C_INFO}资源开销: ~85MB RAM (Fail2ban ~22MB, 可接受)${C_RST}"
-    if ! ask_yes "安装 CrowdSec？(可与 Fail2ban 共存)"; then return; fi
-    curl -fsSL https://raw.githubusercontent.com/crowdsecurity/crowdsec/master/scripts/install.sh \
-        -o /tmp/crowdsec-install.sh 2>/dev/null || {
-        echo -e "${C_FAIL}下载安装脚本失败, 请检查网络。${C_RST}"; wait_key; return; }
-    bash /tmp/crowdsec-install.sh
-    rm -f /tmp/crowdsec-install.sh
-    if command -v cscli >/dev/null 2>&1; then
-        echo -e "${C_OK}CrowdSec 已安装。${C_RST}"
-        echo -e "${C_INFO}常用命令:${C_RST}"
-        echo -e "  ${C_WARN}cscli metrics${C_RST}     — 查看检测指标"
-        echo -e "  ${C_WARN}cscli decisions list${C_RST} — 查看封禁列表"
-        echo -e "  ${C_WARN}cscli alerts list${C_RST}    — 查看告警"
-        echo -e "${C_INFO}建议安装 bouncer (如 iptables-bouncer):${C_RST}"
-        echo -e "  ${C_WARN}cscli bouncers install -n iptables${C_RST}"
-    else
-        echo -e "${C_FAIL}CrowdSec 安装失败, 请手动排查。${C_RST}"
+    echo -e "${C_WARN}>>> CrowdSec 完整部署向导 <<<${C_RST}"
+    echo -e "${C_INFO}安装 + 场景 + Bouncer + 告警, 审计模式为只读。${C_RST}"
+    echo ""
+    bash "$cs_script"
+    wait_key
+}
+
+crowdsec_deploy() {
+    local script_dir
+    script_dir=$(dirname "$(readlink -f "$0" 2>/dev/null || echo "$0")")
+    local cs_script="$script_dir/scripts/crowdsec_setup.sh"
+    [ ! -f "$cs_script" ] && cs_script="/usr/local/share/secure-vps/scripts/crowdsec_setup.sh"
+    if [ ! -f "$cs_script" ]; then
+        echo -e "${C_FAIL}找不到 CrowdSec 部署脚本${C_RST}"
+        wait_key; return
     fi
+    echo -e "${C_WARN}>>> CrowdSec 部署 <<<${C_RST}"
+    echo -e "${C_INFO}调用完整部署脚本 (安装模式)${C_RST}"
+    echo ""
+    bash "$cs_script" --install
     wait_key
 }
 
 crowdsec_status() {
-    echo -e "${C_WARN}>>> CrowdSec 状态 <<<${C_RST}"
-    if ! command -v cscli >/dev/null 2>&1; then
-        echo -e "${C_FAIL}CrowdSec 未安装。${C_RST}"
+    local script_dir
+    script_dir=$(dirname "$(readlink -f "$0" 2>/dev/null || echo "$0")")
+    local cs_script="$script_dir/scripts/crowdsec_setup.sh"
+    [ ! -f "$cs_script" ] && cs_script="/usr/local/share/secure-vps/scripts/crowdsec_setup.sh"
+    if [ ! -f "$cs_script" ]; then
+        echo -e "${C_FAIL}找不到 CrowdSec 部署脚本${C_RST}"
         wait_key; return
     fi
-    echo -e "${C_INFO}── 服务状态 ──${C_RST}"
-    systemctl is-active crowdsec 2>/dev/null && echo -e "${C_OK}crowdsec 运行中${C_RST}" || echo -e "${C_FAIL}crowdsec 未运行${C_RST}"
+    echo -e "${C_WARN}>>> CrowdSec 状态 <<<${C_RST}"
     echo ""
-    echo -e "${C_INFO}── 检测指标 ──${C_RST}"
-    cscli metrics 2>/dev/null || echo -e "${C_WARN}无法获取指标${C_RST}"
+    bash "$cs_script" --status
+    wait_key
+}
+
+crowdsec_audit() {
+    local script_dir
+    script_dir=$(dirname "$(readlink -f "$0" 2>/dev/null || echo "$0")")
+    local cs_script="$script_dir/scripts/crowdsec_setup.sh"
+    [ ! -f "$cs_script" ] && cs_script="/usr/local/share/secure-vps/scripts/crowdsec_setup.sh"
+    if [ ! -f "$cs_script" ]; then
+        echo -e "${C_FAIL}找不到 CrowdSec 部署脚本${C_RST}"
+        wait_key; return
+    fi
+    echo -e "${C_WARN}>>> CrowdSec 只读审计 <<<${C_RST}"
+    echo -e "${C_INFO}审计模式不修改任何配置, 仅检查并生成报告。${C_RST}"
     echo ""
-    echo -e "${C_INFO}── 封禁决策 ──${C_RST}"
-    cscli decisions list 2>/dev/null || echo -e "${C_WARN}无封禁决策${C_RST}"
-    echo ""
-    echo -e "${C_INFO}── Bouncer ──${C_RST}"
-    cscli bouncers list 2>/dev/null || echo -e "${C_WARN}无 bouncer${C_RST}"
+    bash "$cs_script" --audit
     wait_key
 }
 
