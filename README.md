@@ -1,5 +1,12 @@
 # VPS Security Enhancement Scripts — Harden Your VPS from First Login to Incident Response
 
+> **Test Report**: This release passed a full [aviation-grade test](TEST-REPORT-v4.0.0.md) (126 tests, Docker Ubuntu 22.04, 100% pass rate after 3 bug fixes). See the [Test Report](TEST-REPORT-v4.0.0.md) for details.
+
+> **Changelog (2026-09-02)**: 3 bugs found and fixed during v4.0.0 full test:
+> - `bigdata_security_audit.sh`: removed unused `SECTION_FILTER` variable (SC2034)
+> - `stig_compliance_check.sh`: fixed `printf %d` receiving dual output from `grep -c || echo 0` (invalid number error in severity breakdown)
+> - `cis_benchmark_audit.sh`: fixed JSON report invalid due to unescaped control characters (newline/tab/CR) in `evidence` and `desc` fields
+
 A security-first interactive bash script for VPS hardening, with a scenario-driven handbook and cheatsheets included. One script, zero dependencies, one command to start — plus a real handbook that tells you *why*, not just *how*.
 
 > This is a **living repo**: the script and handbook expand by security direction over time. The current release ships a 3200-line interactive script + 20-chapter handbook + 4 cheatsheets. Future iterations add more depth per layer.
