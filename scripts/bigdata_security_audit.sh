@@ -30,7 +30,6 @@ set -euo pipefail
 APP_NAME="bigdata_security_audit"
 APP_VER="v3.0.0"
 PLATFORM_FILTER=""
-SECTION_FILTER=""
 JSON_OUTPUT=false
 REPORT_DIR="/var/log/bigdata-audit"
 TIMESTAMP=$(date +%Y%m%d%H%M%S)
@@ -55,7 +54,6 @@ parse_args() {
         case "$1" in
             --hadoop) PLATFORM_FILTER="hadoop"; shift ;;
             --spark) PLATFORM_FILTER="spark"; shift ;;
-            --section) SECTION_FILTER="$2"; shift 2 ;;
             --json) JSON_OUTPUT=true; shift ;;
             -h|--help) sed -n '2,24p' "$0"; exit 0 ;;
             *) echo "未知参数: $1"; exit 1 ;;

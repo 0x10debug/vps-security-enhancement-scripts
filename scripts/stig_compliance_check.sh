@@ -502,8 +502,11 @@ print_summary() {
     printf "  Compliance:     %d%%\n" "$pass_pct"
     echo ""
     echo "  Severity breakdown:"
-    printf "    CAT I (high):   %d FAIL\n" "$(grep -c "Cat I.*FAIL" "$REPORT_TXT" 2>/dev/null || echo 0)"
-    printf "    CAT II (medium): %d FAIL\n" "$(grep -c "CAT2.*FAIL" "$REPORT_TXT" 2>/dev/null || echo 0)"
+    local cat1_fails cat2_fails
+    cat1_fails=$(grep -c "Cat I.*FAIL" "$REPORT_TXT" 2>/dev/null || true)
+    cat2_fails=$(grep -c "CAT2.*FAIL" "$REPORT_TXT" 2>/dev/null || true)
+    printf "    CAT I (high):   %d FAIL\n" "${cat1_fails:-0}"
+    printf "    CAT II (medium): %d FAIL\n" "${cat2_fails:-0}"
     echo ""
     echo "  Reports:"
     echo "    TXT:  $REPORT_TXT"

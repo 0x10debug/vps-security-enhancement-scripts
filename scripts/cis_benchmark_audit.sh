@@ -156,8 +156,20 @@ run_check() {
 
     # JSON 累积
     local json_entry
+    # Escape: backslash, double-quote, newline, tab, carriage return
+    local esc_desc esc_evidence
+    esc_desc="${desc//\\/\\\\}"
+    esc_desc="${esc_desc//\"/\\\"}"
+    esc_desc="${esc_desc//$'\n'/\\n}"
+    esc_desc="${esc_desc//$'\t'/\\t}"
+    esc_desc="${esc_desc//$'\r'/\\r}"
+    esc_evidence="${evidence//\\/\\\\}"
+    esc_evidence="${esc_evidence//\"/\\\"}"
+    esc_evidence="${esc_evidence//$'\n'/\\n}"
+    esc_evidence="${esc_evidence//$'\t'/\\t}"
+    esc_evidence="${esc_evidence//$'\r'/\\r}"
     json_entry=$(printf '{"id":"%s","description":"%s","level":%d,"result":"%s","evidence":"%s"}' \
-        "$cis_id" "${desc//\"/\\\"}" "$level" "$result" "${evidence//\"/\\\"}")
+        "$cis_id" "$esc_desc" "$level" "$result" "$esc_evidence")
     if [ "$TOTAL_CHECKS" -gt 1 ]; then
         JSON_RESULTS="$JSON_RESULTS,$json_entry"
     else
