@@ -1,27 +1,27 @@
 #!/bin/bash
 # ════════════════════════════════════════════════════════════
 #  bigdata_security_audit.sh — Big Data Platform Security Audit
-#  适用系统: Linux 主机 (需 Hadoop/Spark 已安装或通过 Docker 运行)
-#  运行身份: root 或对应服务账号
-#  模式: 只读审计 (不修改任何配置)
-#  参考: Treydone/hadoop-sec-bench
+#  Supported OS: Linux host (requires Hadoop/Spark installed or running via Docker)
+#  Run as: root or corresponding service account
+#  Mode: Read-only audit (no configuration modified)
+#  Reference: Treydone/hadoop-sec-bench
 #         cys3c/BigDataAudit
 #         Apache Hadoop Security Documentation
 #         Apache Spark Security Documentation
-#  项目主页: https://github.com/0x10debug/vps-security-enhancement-scripts
+#  Project home: https://github.com/0x10debug/vps-security-enhancement-scripts
 # ════════════════════════════════════════════════════════════
 #
-# 用法:
-#   sudo ./scripts/bigdata_security_audit.sh                    # 审计所有已检测平台
-#   sudo ./scripts/bigdata_security_audit.sh --hadoop           # 只审计 Hadoop
-#   sudo ./scripts/bigdata_security_audit.sh --spark            # 只审计 Spark
-#   sudo ./scripts/bigdata_security_audit.sh --section auth     # 只审计认证章节
-#   sudo ./scripts/bigdata_security_audit.sh --json             # JSON 输出
+# Usage:
+#   sudo ./scripts/bigdata_security_audit.sh                    # Audit all detected platforms
+#   sudo ./scripts/bigdata_security_audit.sh --hadoop           # Audit Hadoop only
+#   sudo ./scripts/bigdata_security_audit.sh --spark            # Audit Spark only
+#   sudo ./scripts/bigdata_security_audit.sh --section auth     # Audit authentication section only
+#   sudo ./scripts/bigdata_security_audit.sh --json             # JSON output
 #
-# 退出码:
-#   0 — 成功
-#   1 — 无平台可检测 / 参数错误
-#   2 — 部分功能不可用
+# Exit codes:
+#   0 — Success
+#   1 — No platform to detect / Parameter error
+#   2 — Some features unavailable
 
 set -euo pipefail
 # shellcheck disable=SC2154
@@ -48,7 +48,7 @@ C_WARN='\033[0;33m'
 C_INFO='\033[0;34m'
 C_RST='\033[0m'
 
-# ── 参数解析 ─────────────────────────────────────────────────
+# ── Parameter parsing ─────────────────────────────────────────────────
 parse_args() {
     while [ $# -gt 0 ]; do
         case "$1" in
@@ -56,12 +56,12 @@ parse_args() {
             --spark) PLATFORM_FILTER="spark"; shift ;;
             --json) JSON_OUTPUT=true; shift ;;
             -h|--help) sed -n '2,24p' "$0"; exit 0 ;;
-            *) echo "未知参数: $1"; exit 1 ;;
+            *) echo "Unknown parameter: $1"; exit 1 ;;
         esac
     done
 }
 
-# ── 平台探测 ─────────────────────────────────────────────────
+# ── Platform detection ─────────────────────────────────────────────────
 detect_platforms() {
     DETECTED_PLATFORMS=""
 
@@ -90,7 +90,7 @@ detect_platforms() {
     DETECTED_PLATFORMS=$(echo "$DETECTED_PLATFORMS" | xargs | tr ' ' '\n' | sort -u | tr '\n' ' ' | xargs)
 }
 
-# ── 报告初始化 ───────────────────────────────────────────────
+# ── Report initialization ───────────────────────────────────────────────
 init_report() {
     mkdir -p "$REPORT_DIR" 2>/dev/null || REPORT_DIR="/tmp/bigdata-audit"
     mkdir -p "$REPORT_DIR" 2>/dev/null || true
@@ -106,7 +106,7 @@ init_report() {
     } > "$REPORT_FILE"
 }
 
-# ── 检查函数 ─────────────────────────────────────────────────
+# ── Check functions ─────────────────────────────────────────────────
 run_check() {
     local id="$1" desc="$2"
     shift 2
@@ -153,7 +153,7 @@ run_check() {
     fi
 }
 
-# ── Hadoop 安全审计 ──────────────────────────────────────────
+# ── Hadoop security audit ──────────────────────────────────────────
 audit_hadoop() {
     echo ""
     echo "━━━ Hadoop Security Audit ━━━"
@@ -161,49 +161,49 @@ audit_hadoop() {
     local conf_dir="/etc/hadoop/conf"
     [ -d "$conf_dir" ] || conf_dir="/opt/hadoop/etc/hadoop"
 
-    echo -e "  ${C_INFO}── 认证 (Kerberos) ──${C_RST}"
+    echo -e "  ${C_INFO}── Authentication (Kerberos) ──${C_RST}"
 
-    run_check "HADOOP-AUTH-1.1" "Kerberos 认证已启用" \
+    run_check "HADOOP-AUTH-1.1" "Kerberos authentication enabled" \
         bash -c "grep -q 'hadoop.security.authentication.*kerberos' $conf_dir/core-site.xml 2>/dev/null && echo 'Kerberos enabled' && return 0 || echo 'Kerberos not enabled' && return 2"
 
-    run_check "HADOOP-AUTH-1.2" "Hadoop 安全授权已启用" \
+    run_check "HADOOP-AUTH-1.2" "Hadoop security authorization enabled" \
         bash -c "grep -q 'hadoop.security.authorization.*true' $conf_dir/core-site.xml 2>/dev/null && echo 'Authorization enabled' && return 0 || echo 'Authorization not enabled' && return 1"
 
-    run_check "HADOOP-AUTH-1.3" "Kerberos NameNode keytab 存在" \
+    run_check "HADOOP-AUTH-1.3" "Kerberos NameNode keytab exists" \
         bash -c "grep -q 'dfs.namenode.keytab.file' $conf_dir/hdfs-site.xml 2>/dev/null && keytab=\$(grep 'dfs.namenode.keytab.file' $conf_dir/hdfs-site.xml 2>/dev/null | sed 's/.*<value>\(.*\)<\/value>.*/\1/' | head -1); [ -n \"\$keytab\" ] && [ -f \"\$keytab\" ] && echo \"keytab found: \$keytab\" && return 0 || echo 'keytab not found' && return 2"
 
-    echo -e "  ${C_INFO}── 传输加密 (SSL/TLS) ──${C_RST}"
+    echo -e "  ${C_INFO}── Transport encryption (SSL/TLS) ──${C_RST}"
 
-    run_check "HADOOP-SSL-2.1" "Hadoop SSL 已启用" \
+    run_check "HADOOP-SSL-2.1" "Hadoop SSL enabled" \
         bash -c "grep -q 'hadoop.ssl.enabled.*true' $conf_dir/core-site.xml 2>/dev/null && echo 'SSL enabled' && return 0 || echo 'SSL not enabled' && return 2"
 
-    run_check "HADOOP-SSL-2.2" "Hadoop RPC 加密 (privacy)" \
+    run_check "HADOOP-SSL-2.2" "Hadoop RPC encryption (privacy)" \
         bash -c "grep -q 'hadoop.rpc.protection.*privacy' $conf_dir/core-site.xml 2>/dev/null && echo 'RPC privacy enabled' && return 0 || echo 'RPC privacy not enabled' && return 2"
 
-    run_check "HADOOP-SSL-2.3" "Hadoop DataNode 传输加密" \
+    run_check "HADOOP-SSL-2.3" "Hadoop DataNode transport encryption" \
         bash -c "grep -q 'dfs.encrypt.data.transfer.*true' $conf_dir/hdfs-site.xml 2>/dev/null && echo 'DataNode encryption enabled' && return 0 || echo 'DataNode encryption not enabled' && return 2"
 
-    echo -e "  ${C_INFO}── 权限与 ACL ──${C_RST}"
+    echo -e "  ${C_INFO}── Permissions and ACL ──${C_RST}"
 
-    run_check "HADOOP-PERM-3.1" "HDFS 权限检查已启用" \
+    run_check "HADOOP-PERM-3.1" "HDFS permission check enabled" \
         bash -c "grep -q 'dfs.permissions.enabled.*true' $conf_dir/hdfs-site.xml 2>/dev/null && echo 'permissions enabled' && return 0 || echo 'permissions may be disabled' && return 2"
 
-    run_check "HADOOP-PERM-3.2" "HDFS ACL 已启用" \
+    run_check "HADOOP-PERM-3.2" "HDFS ACL enabled" \
         bash -c "grep -q 'dfs.namenode.acls.enabled.*true' $conf_dir/hdfs-site.xml 2>/dev/null && echo 'ACLs enabled' && return 0 || echo 'ACLs not enabled' && return 2"
 
-    run_check "HADOOP-PERM-3.3" "YARN 调度器公平队列 ACL" \
+    run_check "HADOOP-PERM-3.3" "YARN scheduler fair queue ACL" \
         bash -c "grep -q 'yarn.scheduler.fair.acl' $conf_dir/yarn-site.xml 2>/dev/null && echo 'YARN queue ACL configured' && return 0 || echo 'YARN queue ACL not configured' && return 2"
 
-    echo -e "  ${C_INFO}── 审计日志 ──${C_RST}"
+    echo -e "  ${C_INFO}── Audit log ──${C_RST}"
 
-    run_check "HADOOP-AUDIT-4.1" "HDFS 审计日志已启用" \
+    run_check "HADOOP-AUDIT-4.1" "HDFS audit log enabled" \
         bash -c "grep -q 'dfs.namenode.audit.log.enabled.*true' $conf_dir/hdfs-site.xml 2>/dev/null && echo 'HDFS audit log enabled' && return 0 || echo 'HDFS audit log not enabled' && return 2"
 
-    run_check "HADOOP-AUDIT-4.2" "YARN 审计日志已启用" \
+    run_check "HADOOP-AUDIT-4.2" "YARN audit log enabled" \
         bash -c "grep -q 'yarn.resourcemanager.audit-log.enabled.*true' $conf_dir/yarn-site.xml 2>/dev/null && echo 'YARN audit log enabled' && return 0 || echo 'YARN audit log not enabled' && return 2"
 }
 
-# ── Spark 安全审计 ───────────────────────────────────────────
+# ── Spark security audit ───────────────────────────────────────────
 audit_spark() {
     echo ""
     echo "━━━ Spark Security Audit ━━━"
@@ -211,61 +211,61 @@ audit_spark() {
     local conf_dir="/etc/spark/conf"
     [ -d "$conf_dir" ] || conf_dir="/opt/spark/conf"
 
-    echo -e "  ${C_INFO}── 认证 (Kerberos) ──${C_RST}"
+    echo -e "  ${C_INFO}── Authentication (Kerberos) ──${C_RST}"
 
-    run_check "SPARK-AUTH-1.1" "Spark Kerberos 认证已启用" \
+    run_check "SPARK-AUTH-1.1" "Spark Kerberos authentication enabled" \
         bash -c "grep -q 'spark.kerberos.access.enabled.*true' $conf_dir/spark-defaults.conf 2>/dev/null && echo 'Kerberos enabled' && return 0 || echo 'Kerberos not enabled' && return 2"
 
-    run_check "SPARK-AUTH-1.2" "Spark 认证密钥已配置" \
+    run_check "SPARK-AUTH-1.2" "Spark authentication key configured" \
         bash -c "grep -q 'spark.auth.secret' $conf_dir/spark-defaults.conf 2>/dev/null && echo 'auth secret configured' && return 0 || echo 'auth secret not configured' && return 2"
 
-    echo -e "  ${C_INFO}── 传输加密 (SSL/TLS) ──${C_RST}"
+    echo -e "  ${C_INFO}── Transport encryption (SSL/TLS) ──${C_RST}"
 
-    run_check "SPARK-SSL-2.1" "Spark SSL 已启用" \
+    run_check "SPARK-SSL-2.1" "Spark SSL enabled" \
         bash -c "grep -q 'spark.ssl.enabled.*true' $conf_dir/spark-defaults.conf 2>/dev/null && echo 'SSL enabled' && return 0 || echo 'SSL not enabled' && return 2"
 
-    run_check "SPARK-SSL-2.2" "Spark RPC 加密已启用" \
+    run_check "SPARK-SSL-2.2" "Spark RPC encryption enabled" \
         bash -c "grep -q 'spark.network.crypto.enabled.*true' $conf_dir/spark-defaults.conf 2>/dev/null && echo 'RPC encryption enabled' && return 0 || echo 'RPC encryption not enabled' && return 2"
 
-    run_check "SPARK-SSL-2.3" "Spark UI SSL 已启用" \
+    run_check "SPARK-SSL-2.3" "Spark UI SSL enabled" \
         bash -c "grep -q 'spark.ui.ssl.enabled.*true' $conf_dir/spark-defaults.conf 2>/dev/null && echo 'UI SSL enabled' && return 0 || echo 'UI SSL not enabled' && return 2"
 
-    echo -e "  ${C_INFO}── 权限与 ACL ──${C_RST}"
+    echo -e "  ${C_INFO}── Permissions and ACL ──${C_RST}"
 
-    run_check "SPARK-PERM-3.1" "Spark UI ACL 已配置" \
+    run_check "SPARK-PERM-3.1" "Spark UI ACL configured" \
         bash -c "grep -q 'spark.ui.acls.enabled.*true' $conf_dir/spark-defaults.conf 2>/dev/null && echo 'UI ACL enabled' && return 0 || echo 'UI ACL not enabled' && return 2"
 
-    run_check "SPARK-PERM-3.2" "Spark View ACLs 已配置" \
+    run_check "SPARK-PERM-3.2" "Spark View ACLs configured" \
         bash -c "grep -q 'spark.ui.view.acls' $conf_dir/spark-defaults.conf 2>/dev/null && echo 'view ACLs configured' && return 0 || echo 'view ACLs not configured' && return 2"
 
-    run_check "SPARK-PERM-3.3" "Spark 事件日志 ACL" \
+    run_check "SPARK-PERM-3.3" "Spark event log ACL" \
         bash -c "grep -q 'spark.eventLog.acls.enabled.*true' $conf_dir/spark-defaults.conf 2>/dev/null && echo 'event log ACL enabled' && return 0 || echo 'event log ACL not enabled' && return 2"
 
-    echo -e "  ${C_INFO}── 审计日志 ──${C_RST}"
+    echo -e "  ${C_INFO}── Audit log ──${C_RST}"
 
-    run_check "SPARK-AUDIT-4.1" "Spark 事件日志已启用" \
+    run_check "SPARK-AUDIT-4.1" "Spark event log enabled" \
         bash -c "grep -q 'spark.eventLog.enabled.*true' $conf_dir/spark-defaults.conf 2>/dev/null && echo 'event log enabled' && return 0 || echo 'event log not enabled' && return 2"
 
-    run_check "SPARK-AUDIT-4.2" "Spark 事件日志目录已配置" \
+    run_check "SPARK-AUDIT-4.2" "Spark event log directory configured" \
         bash -c "grep -q 'spark.eventLog.dir' $conf_dir/spark-defaults.conf 2>/dev/null && echo 'event log dir configured' && return 0 || echo 'event log dir not configured' && return 2"
 }
 
-# ── 审计主流程 ───────────────────────────────────────────────
+# ── Audit main flow ───────────────────────────────────────────────
 audit_all() {
-    echo -e "${C_WARN}>>> 大数据平台安全审计 <<<${C_RST}"
-    echo -e "${C_INFO}只读模式, 不修改任何配置${C_RST}"
+    echo -e "${C_WARN}>>> Big data platform security audit <<<${C_RST}"
+    echo -e "${C_INFO}Read-only mode, no configuration modified${C_RST}"
     echo ""
 
     detect_platforms
     init_report
 
     if [ -z "$DETECTED_PLATFORMS" ]; then
-        echo -e "${C_WARN}未检测到任何大数据平台${C_RST}"
-        echo -e "${C_INFO}支持: Hadoop, Spark${C_RST}"
+        echo -e "${C_WARN}No big data platform detected${C_RST}"
+        echo -e "${C_INFO}Supported: Hadoop, Spark${C_RST}"
         return 0
     fi
 
-    echo -e "${C_INFO}检测到: $DETECTED_PLATFORMS${C_RST}"
+    echo -e "${C_INFO}Detected: $DETECTED_PLATFORMS${C_RST}"
     echo ""
 
     local should_audit=false
@@ -282,18 +282,18 @@ audit_all() {
     done
 
     if [ "$should_audit" = false ]; then
-        echo -e "${C_WARN}未检测到匹配的平台: $PLATFORM_FILTER${C_RST}"
+        echo -e "${C_WARN}No matching platform detected: $PLATFORM_FILTER${C_RST}"
         return 0
     fi
 
-    # JSON 报告
+    # JSON report
     if [ "$JSON_OUTPUT" = true ]; then
         echo "${JSON_RESULTS}]" > "$REPORT_DIR/bigdata-audit-${TIMESTAMP}.json"
     else
         echo "${JSON_RESULTS}]" > "$REPORT_DIR/bigdata-audit-${TIMESTAMP}.json"
     fi
 
-    # 摘要
+    # Summary
     echo ""
     echo -e "${C_INFO}╔══════════════════════════════════════════╗${C_RST}"
     echo -e "${C_INFO}║  Big Data Security Audit Summary           ║${C_RST}"
@@ -306,11 +306,11 @@ audit_all() {
     printf "  ${C_INFO}SKIP${C_RST}: %d\n" "$COUNT_SKIP"
     printf "  Total: %d\n" "$TOTAL_CHECKS"
     echo ""
-    echo -e "报告: $REPORT_FILE"
+    echo -e "Report: $REPORT_FILE"
     echo -e "JSON: $REPORT_DIR/bigdata-audit-${TIMESTAMP}.json"
 }
 
-# ── 主流程 ───────────────────────────────────────────────────
+# ── Main flow ───────────────────────────────────────────────────
 main() {
     parse_args "$@"
     audit_all || true

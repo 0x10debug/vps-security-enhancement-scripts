@@ -74,7 +74,7 @@ curl -m 3 http://203.0.113.10:8080
 `vps_secure.sh` has a port connectivity probe:
 
 ```bash
-secure-vps  # c1 → 6 (端口连通探测)
+secure-vps  # c1 → 6 (Port connectivity probe)
 # Enter host:port: 203.0.113.10:8080
 # Probes with a 3s timeout, reports open/closed/filtered
 ```
@@ -101,7 +101,7 @@ firewall-cmd --permanent --add-port=8080/tcp
 firewall-cmd --reload
 
 # Or via secure-vps:
-secure-vps  # b2 → 3 (放行自定义端口)
+secure-vps  # b2 → 3 (Allow custom port)
 ```
 
 ### Layer 3: Is Docker bypassing the firewall?
@@ -175,7 +175,7 @@ traceroute 203.0.113.10
 # Classic traceroute
 
 # vps_secure.sh offers NextTrace (better for Asian routes):
-secure-vps  # d2 → 5 (回程路由 / NextTrace)
+secure-vps  # d2 → 5 (Return route / NextTrace)
 # Runs nexttrace --fast-trace (three-network quick trace from China)
 ```
 
@@ -249,7 +249,7 @@ nslookup google.com
 # ;; connection timed out; no servers could be reached
 
 # Fix via secure-vps:
-secure-vps  # c1 → 4 (DNS 切换)
+secure-vps  # c1 → 4 (DNS switch)
 # Options: Cloudflare, Google, AliDNS, custom
 
 # Or manually:
@@ -293,7 +293,7 @@ mtr 203.0.113.10
 ### NextTrace (better for Asian routes)
 
 ```bash
-secure-vps  # d2 → 5 (回程路由 / NextTrace)
+secure-vps  # d2 → 5 (Return route / NextTrace)
 # Installs NextTrace if not present, runs --fast-trace
 # (traces from China Telecom, China Unicom, China Mobile)
 ```
@@ -313,7 +313,7 @@ traceroute -T -p 443 203.0.113.10
 ### bench.sh
 
 ```bash
-secure-vps  # d2 → 3 (带宽测速 / bench.sh)
+secure-vps  # d2 → 3 (Bandwidth speed test / bench.sh)
 # Runs bench.sh which tests download speed from multiple global nodes
 # and reports CPU model, kernel, uptime, and disk I/O speed
 ```
@@ -352,7 +352,7 @@ iperf3 gives you the actual maximum throughput between two points, unlike bench.
 For servers used as media proxies or VPNs, you often need to know which streaming services the IP can access:
 
 ```bash
-secure-vps  # d2 → 4 (流媒体解锁)
+secure-vps  # d2 → 4 (Streaming unlock)
 # Runs a streaming unlock detection script
 # Checks: Netflix, Disney+, YouTube Premium, ChatGPT, TikTok, etc.
 ```
@@ -377,7 +377,7 @@ This matters because:
 For proxy/VPN servers, IP quality affects deliverability (email), reputation (streaming), and reachability (some sites block known VPS ranges):
 
 ```bash
-secure-vps  # d2 → 7 (IP 质量评分)
+secure-vps  # d2 → 7 (IP quality score)
 # Runs IP.Check.Place or similar service
 # Reports: fraud score, abuse confidence, proxy/VPN detection, blacklist status
 ```
@@ -408,7 +408,7 @@ BBR (Bottleneck Bandwidth and Round-trip propagation time) is a TCP congestion c
 ### Enable BBR
 
 ```bash
-secure-vps  # c2 → 1 (开启 BBR)
+secure-vps  # c2 → 1 (Enable BBR)
 ```
 
 Checks kernel version (needs ≥ 4.9), loads the `tcp_bbr` module, writes `/etc/sysctl.d/99-secure-vps-bbr.conf`:

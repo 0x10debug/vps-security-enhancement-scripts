@@ -48,7 +48,7 @@ df -h /
 # /dev/vda1   39G   2.1G  37G   6%  /
 ```
 
-The fastest single command to get all of this at once is `secure-vps` → `c1` → `1` (主机档案 / Host Profile). It prints distro, kernel, architecture, CPU model, core count, RAM, disk, SSH port, uptime, virtualization type, and public IP geolocation in one screen. Run it before anything else — it's read-only and gives you the complete picture.
+The fastest single command to get all of this at once is `secure-vps` → `c1` → `1` (Host Profile). It prints distro, kernel, architecture, CPU model, core count, RAM, disk, SSH port, uptime, virtualization type, and public IP geolocation in one screen. Run it before anything else — it's read-only and gives you the complete picture.
 
 ### Network configuration
 
@@ -144,7 +144,7 @@ Even if you plan to switch to key-only auth immediately, change the password fir
 **Set the timezone** (a1 does not touch this):
 
 ```bash
-secure-vps  # then c1 → 2 (时区切换)
+secure-vps  # then c1 → 2 (Timezone switch)
 # Pick from: Asia/Shanghai, Asia/Hong_Kong, Asia/Tokyo,
 #            Asia/Singapore, Europe/London, America/New_York
 ```
@@ -161,7 +161,7 @@ timedatectl
 **Configure NTP time sync** (a1 does not start NTP):
 
 ```bash
-secure-vps  # then c1 → 3 (NTP 时间同步)
+secure-vps  # then c1 → 3 (NTP time sync)
 # This installs chrony or systemd-timesyncd and enables it.
 ```
 

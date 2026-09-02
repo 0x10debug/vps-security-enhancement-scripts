@@ -13,7 +13,7 @@ This chapter covers the full Docker lifecycle on a VPS: installation via `vps_se
 ### Install via vps_secure.sh
 
 ```bash
-secure-vps  # d1 → 1 → 1 (Docker 引擎 → 安装引擎)
+secure-vps  # d1 → 1 → 1 (Docker engine → Install engine)
 ```
 
 This calls the official Docker installation script (`get.docker.com`), then enables and starts the Docker service. It works on all supported distros (Ubuntu, Debian, CentOS, AlmaLinux, Rocky).
@@ -57,7 +57,7 @@ Docker Hub's registry is hosted in the US/EU. From China or high-latency Asian n
 ### Fix: Mirror acceleration
 
 ```bash
-secure-vps  # d1 → 1 → 2 (镜像加速与日志轮转)
+secure-vps  # d1 → 1 → 2 (Image acceleration and log rotation)
 # Choose:
 #   1. docker.1ms.run
 #   2. docker.m.daocloud.io
@@ -141,7 +141,7 @@ services:
 truncate -s 0 /var/lib/docker/containers/*/*-json.log
 
 # Or use secure-vps cleanup:
-secure-vps  # c1 → 8 (系统清理)
+secure-vps  # c1 → 8 (System cleanup)
 # Offers to prune unused Docker images/containers (volumes untouched)
 ```
 
@@ -212,7 +212,7 @@ grep iptables /etc/docker/daemon.json
 ### Fix: UFW Takeover
 
 ```bash
-secure-vps  # d1 → 1 → 3 (UFW 接管 / 修复端口绕过)
+secure-vps  # d1 → 1 → 3 (UFW takeover / fix port bypass)
 ```
 
 What this does, step by step:
@@ -313,7 +313,7 @@ Deploys Uptime Kuma on port 3001 — a lightweight self-hosted uptime monitor wi
 ### 1Panel (alternative management panel)
 
 ```bash
-secure-vps  # d1 → 3 (1Panel 面板)
+secure-vps  # d1 → 3 (1Panel dashboard)
 ```
 
 1Panel is a Chinese-origin server management panel that combines Docker management, website hosting, database management, firewall config, and file management in one UI. It's heavier than Portainer but more full-featured for users who want a "cPanel-like" experience.
@@ -373,7 +373,7 @@ See Chapter 06 for the full backup and recovery workflow.
 ### Prune unused resources
 
 ```bash
-secure-vps  # c1 → 8 (系统清理)
+secure-vps  # c1 → 8 (System cleanup)
 # Offers to run: docker system prune -af
 # (removes stopped containers, unused networks, dangling images, build cache)
 # Volumes are NOT touched (safe).
@@ -432,7 +432,7 @@ cat /etc/resolv.conf
 # nameserver 8.8.8.8   ← if missing or wrong, fix it
 
 # Switch DNS via secure-vps:
-secure-vps  # c1 → 4 (DNS 切换)
+secure-vps  # c1 → 4 (DNS switch)
 # Options: Cloudflare (1.1.1.1), Google (8.8.8.8), AliDNS (223.5.5.5), custom
 
 # Restart Docker to pick up the change:

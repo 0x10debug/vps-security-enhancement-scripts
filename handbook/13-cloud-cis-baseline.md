@@ -95,7 +95,7 @@ Each run produces two reports in `/var/log/cloud-cis-audit/`:
 From `secure-vps`, the cloud CIS baseline audit is accessible via:
 
 ```
-D · 安全运维 → d2 云安全 → 云平台 CIS 基线审计
+D · Security operations → d2 Cloud security → Cloud platform CIS baseline audit
 ```
 
 ## Common Findings and Fixes

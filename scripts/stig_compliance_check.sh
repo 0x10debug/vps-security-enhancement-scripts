@@ -1,25 +1,25 @@
 #!/bin/bash
 # ════════════════════════════════════════════════════════════
 #  stig_compliance_check.sh — DISA STIG Compliance Check
-#  适用系统: Ubuntu / Debian / RHEL / CentOS / AlmaLinux / Rocky
-#  运行身份: root (推荐) / 普通用户 (部分检查受限)
-#  审计模式: 只读, 不修改任何系统配置
-#  参考: DISA STIG for RHEL 8/9 V1R10+, Ubuntu 22.04 STIG V1R8+
-#  项目主页: https://github.com/0x10debug/vps-security-enhancement-scripts
+#  Supported OS: Ubuntu / Debian / RHEL / CentOS / AlmaLinux / Rocky
+#  Run as: root (recommended) / Regular user (some checks limited)
+#  Audit mode: Read-only, no modifications to system config
+#  Reference: DISA STIG for RHEL 8/9 V1R10+, Ubuntu 22.04 STIG V1R8+
+#  Project home: https://github.com/0x10debug/vps-security-enhancement-scripts
 # ════════════════════════════════════════════════════════════
 #
-# 用法:
-#   sudo ./scripts/stig_compliance_check.sh              # 交互式选择
-#   sudo ./scripts/stig_compliance_check.sh --scanner     # 扫描器模式 (全部检查)
+# Usage:
+#   sudo ./scripts/stig_compliance_check.sh              # Interactive selection
+#   sudo ./scripts/stig_compliance_check.sh --scanner     # Scanner mode (all checks)
 #   sudo ./scripts/stig_compliance_check.sh --enable SRG-OS-000001 --enable SRG-OS-000002
 #   sudo ./scripts/stig_compliance_check.sh --disable SRG-OS-000099
-#   sudo ./scripts/stig_compliance_check.sh --json        # 输出 JSON 报告路径
-#   sudo ./scripts/stig_compliance_check.sh --quiet       # 只输出摘要
+#   sudo ./scripts/stig_compliance_check.sh --json        # Output JSON report path
+#   sudo ./scripts/stig_compliance_check.sh --quiet       # Summary only
 #
-# 退出码:
-#   0 — 审计完成 (不论是否合规)
-#   1 — 参数错误
-#   2 — 不支持的发行版
+# Exit codes:
+#   0 — Audit complete (regardless of compliance)
+#   1 — Parameter error
+#   2 — Unsupported distribution
 
 set -euo pipefail
 
@@ -33,28 +33,28 @@ REPORT_TXT=""
 REPORT_JSON=""
 TIMESTAMP=$(date +%Y%m%d%H%M%S)
 
-# 启用/禁用的 SRG ID 列表
+# Enabled/disabled SRG ID list
 declare -a ENABLE_LIST=()
 declare -a DISABLE_LIST=()
 
-# 计数器
+# Counters
 COUNT_PASS=0
 COUNT_FAIL=0
 COUNT_WARN=0
 COUNT_SKIP=0
 TOTAL_CHECKS=0
 
-# JSON 结果
+# JSON results
 JSON_RESULTS="["
 
-# 颜色
+# Colors
 C_FAIL='\033[0;31m'
 C_OK='\033[0;32m'
 C_WARN='\033[0;33m'
 C_INFO='\033[0;34m'
 C_RST='\033[0m'
 
-# ── 发行版探测 ───────────────────────────────────────────────
+# ── Distro detection ───────────────────────────────────────────────
 detect_distro() {
     if [ -f /etc/os-release ]; then
         . /etc/os-release
@@ -63,14 +63,14 @@ detect_distro() {
         case "$ID" in
             ubuntu|debian) DISTRO_FAMILY="debian" ;;
             rhel|centos|almalinux|rocky|ol) DISTRO_FAMILY="rhel" ;;
-            *) echo "不支持的发行版: $ID"; exit 2 ;;
+            *) echo "Unsupported distribution: $ID"; exit 2 ;;
         esac
     else
-        echo "无法检测发行版 (缺少 /etc/os-release)"; exit 2
+        echo "Cannot detect distribution (missing /etc/os-release)"; exit 2
     fi
 }
 
-# ── 参数解析 ─────────────────────────────────────────────────
+# ── Parameter parsing ─────────────────────────────────────────────────
 parse_args() {
     while [ $# -gt 0 ]; do
         case "$1" in
@@ -80,19 +80,19 @@ parse_args() {
             --enable) ENABLE_LIST+=("$2"); shift 2 ;;
             --disable) DISABLE_LIST+=("$2"); shift 2 ;;
             -h|--help) sed -n '2,20p' "$0"; exit 0 ;;
-            *) echo "未知参数: $1"; exit 1 ;;
+            *) echo "Unknown parameter: $1"; exit 1 ;;
         esac
     done
 }
 
-# ── SRG 过滤 ─────────────────────────────────────────────────
+# ── SRG filter ─────────────────────────────────────────────────
 srg_enabled() {
     local srg_id="$1"
-    # 检查是否在 disable 列表
+    # Check if in disable list
     for d in "${DISABLE_LIST[@]:-}"; do
         [ "$d" = "$srg_id" ] && return 1
     done
-    # 如果 enable 列表非空，只检查 enable 列表中的
+    # If enable list is non-empty, only check items in enable list
     if [ ${#ENABLE_LIST[@]} -gt 0 ]; then
         for e in "${ENABLE_LIST[@]}"; do
             [ "$e" = "$srg_id" ] && return 0
@@ -102,7 +102,7 @@ srg_enabled() {
     return 0
 }
 
-# ── 报告初始化 ───────────────────────────────────────────────
+# ── Report initialization ───────────────────────────────────────────────
 init_report() {
     mkdir -p "$REPORT_DIR" 2>/dev/null || true
     REPORT_TXT="$REPORT_DIR/stig-audit-${TIMESTAMP}.txt"
@@ -120,13 +120,13 @@ init_report() {
     } > "$REPORT_TXT"
 }
 
-# ── 检查函数 ─────────────────────────────────────────────────
+# ── Check functions ─────────────────────────────────────────────────
 run_check() {
     local srg_id="$1" severity="$2" desc="$3"
     shift 3
     local result evidence
 
-    # SRG 过滤
+    # SRG filter
     if ! srg_enabled "$srg_id"; then
         result="SKIP"
         evidence="SRG $srg_id disabled by user"
@@ -181,31 +181,31 @@ run_check() {
     fi
 }
 
-# ── 辅助函数 ─────────────────────────────────────────────────
+# ── Helper functions ─────────────────────────────────────────────────
 check_sysctl() {
     local key="$1" expected="$2"
     local actual
     actual=$(sysctl -n "$key" 2>/dev/null || echo "N/A")
     if [ "$actual" = "N/A" ]; then
-        echo "$key 不存在"; return 2
+        echo "$key Does not exist"; return 2
     elif [ "$actual" = "$expected" ]; then
         echo "$key = $actual"; return 0
     else
-        echo "$key = $actual (期望 $expected)"; return 1
+        echo "$key = $actual (Expected $expected)"; return 1
     fi
 }
 
 check_file_perm() {
     local path="$1" expected_perm="$2"
     if [ ! -e "$path" ]; then
-        echo "文件不存在: $path"; return 2
+        echo "File does not exist: $path"; return 2
     fi
     local actual
     actual=$(stat -c '%a' "$path" 2>/dev/null || stat -f '%Lp' "$path" 2>/dev/null)
     if [ "$actual" = "$expected_perm" ]; then
-        echo "权限 $actual"; return 0
+        echo "Permissions: $actual"; return 0
     else
-        echo "期望 $expected_perm, 实际 $actual"; return 1
+        echo "Expected $expected_perm, actual $actual"; return 1
     fi
 }
 
@@ -225,7 +225,7 @@ check_service_enabled() {
     if [ "$actual" = "$state" ]; then
         echo "$svc is $state"; return 0
     else
-        echo "$svc is $actual (期望 $state)"; return 1
+        echo "$svc is $actual (Expected $state)"; return 1
     fi
 }
 
@@ -235,7 +235,7 @@ section_access_control() {
     echo "━━━ Access Control (SRG-OS-0000xx) ━━━"
 
     run_check "SRG-OS-000023" "CAT1" "Ensure SSH root login is disabled" \
-        bash -c 'val=$(sshd -T 2>/dev/null | awk "/^permitrootlogin /{print \$2}"); [ "$val" = "no" ] && echo "PermitRootLogin=no" && return 0 || echo "PermitRootLogin=$val (期望 no)" && return 1'
+        bash -c 'val=$(sshd -T 2>/dev/null | awk "/^permitrootlogin /{print \$2}"); [ "$val" = "no" ] && echo "PermitRootLogin=no" && return 0 || echo "PermitRootLogin=$val (Expected no)" && return 1'
 
     run_check "SRG-OS-000024" "CAT1" "Ensure SSH protocol is 2" \
         bash -c 'val=$(sshd -T 2>/dev/null | awk "/^protocol /{print \$2}"); [ "$val" = "2" ] || [ -z "$val" ] && echo "Protocol=2 (default)" && return 0 || echo "Protocol=$val" && return 1'
@@ -244,13 +244,13 @@ section_access_control() {
         bash -c 'val=$(sshd -T 2>/dev/null | awk "/^permitemptypasswords /{print \$2}"); [ "$val" = "no" ] && echo "PermitEmptyPasswords=no" && return 0 || echo "PermitEmptyPasswords=$val" && return 1'
 
     run_check "SRG-OS-000026" "CAT1" "Ensure SSH MaxAuthTries is 4 or less" \
-        bash -c 'val=$(sshd -T 2>/dev/null | awk "/^maxauthtries /{print \$2}"); [ -n "$val" ] && [ "$val" -le 4 ] 2>/dev/null && echo "MaxAuthTries=$val" && return 0 || echo "MaxAuthTries=$val (期望 <=4)" && return 1'
+        bash -c 'val=$(sshd -T 2>/dev/null | awk "/^maxauthtries /{print \$2}"); [ -n "$val" ] && [ "$val" -le 4 ] 2>/dev/null && echo "MaxAuthTries=$val" && return 0 || echo "MaxAuthTries=$val (Expected <=4)" && return 1'
 
     run_check "SRG-OS-000027" "CAT2" "Ensure SSH ClientAliveInterval is set" \
-        bash -c 'val=$(sshd -T 2>/dev/null | awk "/^clientaliveinterval /{print \$2}"); [ -n "$val" ] && [ "$val" -le 900 ] 2>/dev/null && echo "ClientAliveInterval=$val" && return 0 || echo "ClientAliveInterval=$val (期望 <=900)" && return 1'
+        bash -c 'val=$(sshd -T 2>/dev/null | awk "/^clientaliveinterval /{print \$2}"); [ -n "$val" ] && [ "$val" -le 900 ] 2>/dev/null && echo "ClientAliveInterval=$val" && return 0 || echo "ClientAliveInterval=$val (Expected <=900)" && return 1'
 
     run_check "SRG-OS-000028" "CAT2" "Ensure SSH LoginGraceTime is set to 60 or less" \
-        bash -c 'val=$(sshd -T 2>/dev/null | awk "/^logingracetime /{print \$2}"); [ -n "$val" ] && [ "$val" -le 60 ] 2>/dev/null && echo "LoginGraceTime=$val" && return 0 || echo "LoginGraceTime=$val (期望 <=60)" && return 1'
+        bash -c 'val=$(sshd -T 2>/dev/null | awk "/^logingracetime /{print \$2}"); [ -n "$val" ] && [ "$val" -le 60 ] 2>/dev/null && echo "LoginGraceTime=$val" && return 0 || echo "LoginGraceTime=$val (Expected <=60)" && return 1'
 
     run_check "SRG-OS-000029" "CAT2" "Ensure SSH access is restricted to required users/groups" \
         bash -c 'sshd -T 2>/dev/null | grep -q "^allowusers\|^allowgroups" && echo "access list configured" && return 0 || echo "no SSH access restriction" && return 2'
@@ -484,7 +484,7 @@ section_os_hardening() {
         bash -c '! check_pkg_installed postfix 2>/dev/null && ! check_pkg_installed sendmail 2>/dev/null && echo "no mail server" && return 0 || echo "mail server installed" && return 2'
 }
 
-# ── 摘要输出 ─────────────────────────────────────────────────
+# ── Summary output ─────────────────────────────────────────────────
 print_summary() {
     local total=$TOTAL_CHECKS
     local pass_pct=0
@@ -514,7 +514,7 @@ print_summary() {
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 }
 
-# ── JSON 报告 ────────────────────────────────────────────────
+# ── JSON report ────────────────────────────────────────────────
 write_json_report() {
     JSON_RESULTS="$JSON_RESULTS]"
     cat > "$REPORT_JSON" <<EOF
@@ -543,7 +543,7 @@ write_json_report() {
 EOF
 }
 
-# ── 主流程 ───────────────────────────────────────────────────
+# ── Main flow ───────────────────────────────────────────────────
 main() {
     parse_args "$@"
     detect_distro

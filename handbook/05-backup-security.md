@@ -306,7 +306,7 @@ scp root@old-server:~/vps_secure.sh ./
 `vps_secure.sh` can update itself in place:
 
 ```bash
-secure-vps  # z3 (检查更新)
+secure-vps  # z3 (Check for updates)
 ```
 
 The self-update process (`secure_vps_self_update`):
@@ -326,7 +326,7 @@ The self-update process (`secure_vps_self_update`):
 ### Install as global command
 
 ```bash
-secure-vps  # z1 (安装全局命令)
+secure-vps  # z1 (Install global command)
 # Creates symlink: /usr/local/bin/secure-vps → /path/to/vps_secure.sh
 # After this, you can run `secure-vps` from any directory
 # The symlink follows the source file, so updates apply automatically

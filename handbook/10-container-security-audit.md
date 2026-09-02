@@ -56,7 +56,7 @@ Each run produces two reports in `/var/log/docker-audit/`:
 From `secure-vps`, the Docker audit is accessible via:
 
 ```
-D · 安全运维 → d1 容器安全 → Docker 合规审计
+D · Security operations → d1 Container security → Docker compliance audit
 ```
 
 This calls `scripts/docker_security_audit.sh` and displays the summary.
@@ -212,7 +212,7 @@ Each run produces:
 From `secure-vps`, the Dockerfile hardener is accessible via:
 
 ```
-D · 安全运维 → d1 容器安全 → Dockerfile 加固
+D · Security operations → d1 Container security → Dockerfile hardening
 ```
 
 ## Common Findings and Fixes

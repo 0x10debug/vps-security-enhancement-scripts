@@ -1,30 +1,30 @@
 #!/bin/bash
 # ════════════════════════════════════════════════════════════
 #  zerotrust_setup.sh — Zero Trust Network Setup (WireGuard + Headscale)
-#  适用系统: Linux 主机
-#  运行身份: root
-#  模式: 部署 + 配置生成 + 审计 (不直接修改运行中的 Headscale)
-#  参考: juanfont/headscale
+#  Supported OS: Linux host
+#  Run as: root
+#  Mode: Deploy + config generation + audit (does not directly modify running Headscale)
+#  Reference: juanfont/headscale
 #         OLife97/headscale-stack-crowdsec
-#         WireGuard 官方文档
-#  项目主页: https://github.com/0x10debug/vps-security-enhancement-scripts
+#         WireGuard official documentation
+#  Project home: https://github.com/0x10debug/vps-security-enhancement-scripts
 # ════════════════════════════════════════════════════════════
 #
-# 用法:
-#   sudo ./scripts/zerotrust_setup.sh                    # 交互式向导
-#   sudo ./scripts/zerotrust_setup.sh --install-wireguard # 安装 WireGuard
-#   sudo ./scripts/zerotrust_setup.sh --install-headscale # 安装 Headscale
-#   sudo ./scripts/zerotrust_setup.sh --acl               # 生成 ACL 配置
-#   sudo ./scripts/zerotrust_setup.sh --crowdsec          # 生成 CrowdSec 集成配置
-#   sudo ./scripts/zerotrust_setup.sh --geoip             # 生成 GeoIP 过滤配置
-#   sudo ./scripts/zerotrust_setup.sh --audit             # 只读审计零信任配置
+# Usage:
+#   sudo ./scripts/zerotrust_setup.sh                    # Interactive wizard
+#   sudo ./scripts/zerotrust_setup.sh --install-wireguard # Install WireGuard
+#   sudo ./scripts/zerotrust_setup.sh --install-headscale # Install Headscale
+#   sudo ./scripts/zerotrust_setup.sh --acl               # Generate ACL config
+#   sudo ./scripts/zerotrust_setup.sh --crowdsec          # Generate CrowdSec integration config
+#   sudo ./scripts/zerotrust_setup.sh --geoip             # Generate GeoIP filtering config
+#   sudo ./scripts/zerotrust_setup.sh --audit             # Read-only audit zero-trust config
 #   sudo ./scripts/zerotrust_setup.sh --output ./zt-configs
 #   sudo ./scripts/zerotrust_setup.sh --domain zt.example.com
 #
-# 退出码:
-#   0 — 成功
-#   1 — 参数错误 / 依赖缺失
-#   2 — 部分功能不可用
+# Exit codes:
+#   0 — Success
+#   1 — Parameter error / missing dependency
+#   2 — Some features unavailable
 
 set -euo pipefail
 
@@ -48,7 +48,7 @@ C_WARN='\033[0;33m'
 C_INFO='\033[0;34m'
 C_RST='\033[0m'
 
-# ── 参数解析 ─────────────────────────────────────────────────
+# ── Parameter parsing ─────────────────────────────────────────────────
 parse_args() {
     while [ $# -gt 0 ]; do
         case "$1" in
@@ -61,7 +61,7 @@ parse_args() {
             --output) OUTPUT_DIR="$2"; shift 2 ;;
             --domain) DOMAIN="$2"; shift 2 ;;
             -h|--help) sed -n '2,24p' "$0"; exit 0 ;;
-            *) echo "未知参数: $1"; exit 1 ;;
+            *) echo "Unknown parameter: $1"; exit 1 ;;
         esac
     done
     if [ -z "$MODE" ]; then
@@ -75,7 +75,7 @@ parse_args() {
     fi
 }
 
-# ── 报告初始化 ───────────────────────────────────────────────
+# ── Report initialization ───────────────────────────────────────────────
 init_report() {
     mkdir -p "$REPORT_DIR" 2>/dev/null || REPORT_DIR="/tmp/zerotrust-audit"
     mkdir -p "$REPORT_DIR" 2>/dev/null || true
@@ -90,7 +90,7 @@ init_report() {
     } > "$REPORT_FILE"
 }
 
-# ── 检查函数 ─────────────────────────────────────────────────
+# ── Check functions ─────────────────────────────────────────────────
 run_check() {
     local id="$1" desc="$2"
     shift 2
@@ -128,12 +128,12 @@ run_check() {
     } >> "$REPORT_FILE"
 }
 
-# ── WireGuard 安装 ───────────────────────────────────────────
+# ── WireGuard installation ───────────────────────────────────────────
 install_wireguard() {
-    echo -e "${C_WARN}>>> 安装 WireGuard <<<${C_RST}"
+    echo -e "${C_WARN}>>> Install WireGuard <<<${C_RST}"
 
     if command -v wg >/dev/null 2>&1; then
-        echo -e "${C_OK}WireGuard 已安装: $(wg --version)${C_RST}"
+        echo -e "${C_OK}WireGuard Installed: $(wg --version)${C_RST}"
         return 0
     fi
 
@@ -144,39 +144,39 @@ install_wireguard() {
     elif command -v apk >/dev/null 2>&1; then
         apk add --no-cache wireguard-tools
     else
-        echo -e "${C_FAIL}不支持的包管理器${C_RST}"
+        echo -e "${C_FAIL}Unsupported package manager${C_RST}"
         return 1
     fi
 
-    # 启用 IP 转发
+    # Enable IP forwarding
     sysctl -w net.ipv4.ip_forward=1
     sysctl -w net.ipv6.conf.all.forwarding=1
     echo "net.ipv4.ip_forward=1" >> /etc/sysctl.d/99-wireguard.conf
     echo "net.ipv6.conf.all.forwarding=1" >> /etc/sysctl.d/99-wireguard.conf
 
-    echo -e "${C_OK}WireGuard 安装完成${C_RST}"
-    echo -e "${C_INFO}使用 wg-quick up <config> 启动隧道${C_RST}"
+    echo -e "${C_OK}WireGuard installation complete${C_RST}"
+    echo -e "${C_INFO}Use wg-quick up <config> to start tunnel${C_RST}"
 }
 
-# ── Headscale 安装 ───────────────────────────────────────────
+# ── Headscale installation ───────────────────────────────────────────
 install_headscale() {
-    echo -e "${C_WARN}>>> 安装 Headscale (Tailscale 控制服务器) <<<${C_RST}"
+    echo -e "${C_WARN}>>> Install Headscale (Tailscale control server) <<<${C_RST}"
 
     if command -v headscale >/dev/null 2>&1; then
-        echo -e "${C_OK}Headscale 已安装: $(headscale version 2>/dev/null || echo 'unknown')${C_RST}"
+        echo -e "${C_OK}Headscale Installed: $(headscale version 2>/dev/null || echo 'unknown')${C_RST}"
         return 0
     fi
 
-    # 下载最新 release binary
+    # Download latest release binary
     local arch
     arch=$(uname -m)
     case "$arch" in
         x86_64) arch="amd64" ;;
         aarch64) arch="arm64" ;;
-        *) echo -e "${C_FAIL}不支持的架构: $arch${C_RST}"; return 1 ;;
+        *) echo -e "${C_FAIL}Unsupported architecture: $arch${C_RST}"; return 1 ;;
     esac
 
-    echo -e "${C_INFO}下载 Headscale...${C_RST}"
+    echo -e "${C_INFO}Downloading Headscale...${C_RST}"
     local hs_version
     hs_version=$(curl -sL https://api.github.com/repos/juanfont/headscale/releases/latest \
         | grep '"tag_name"' | sed 's/.*"v\(.*\)".*/\1/' | head -1)
@@ -186,14 +186,14 @@ install_headscale() {
         -o /usr/local/bin/headscale
     chmod +x /usr/local/bin/headscale
 
-    # 创建配置目录
+    # Create config directory
     mkdir -p /etc/headscale
     mkdir -p /var/lib/headscale
 
-    # 生成默认配置
+    # Generate default config
     headscale config generate > /etc/headscale/config.yaml 2>/dev/null || true
 
-    # 创建 systemd 服务
+    # Create systemd service
     cat > /etc/systemd/system/headscale.service <<'EOF'
 [Unit]
 Description=Headscale - Tailscale Control Server
@@ -214,14 +214,14 @@ EOF
     systemctl enable headscale
     systemctl start headscale
 
-    echo -e "${C_OK}Headscale 安装完成 (v${hs_version})${C_RST}"
-    echo -e "${C_INFO}配置文件: /etc/headscale/config.yaml${C_RST}"
-    echo -e "${C_INFO}服务: systemctl status headscale${C_RST}"
+    echo -e "${C_OK}Headscale installation complete (v${hs_version})${C_RST}"
+    echo -e "${C_INFO}Config file: /etc/headscale/config.yaml${C_RST}"
+    echo -e "${C_INFO}Service: systemctl status headscale${C_RST}"
 }
 
-# ── ACL 配置生成 ─────────────────────────────────────────────
+# ── ACL config generation ─────────────────────────────────────────────
 generate_acl_config() {
-    echo -e "${C_WARN}>>> 生成 Headscale ACL 配置 <<<${C_RST}"
+    echo -e "${C_WARN}>>> Generate Headscale ACL config <<<${C_RST}"
     mkdir -p "$OUTPUT_DIR"
 
     cat > "$OUTPUT_DIR/headscale-acl.huac" <<'EOF'
@@ -229,43 +229,43 @@ generate_acl_config() {
 // Zero Trust Network Access Control
 // Generated by zerotrust_setup.sh
 
-// ── 用户组 ──
+// ── User groups ──
 group:admin    = ["admin@zt.vps.local"];
 group:developer = ["dev@zt.vps.local"];
 group:viewer   = ["viewer@zt.vps.local"];
 
-// ── 设备标签 ──
+// ── Device tags ──
 tag:server     = ["admin@zt.vps.local"];
 tag:workstation = ["admin@zt.vps.local", "dev@zt.vps.local"];
 tag:monitoring = ["admin@zt.vps.local"];
 
-// ── ACL 规则 ──
+// ── ACL rules ──
 acl = [
-    // admin: 全部访问
+    // admin: full access
     { action = "accept", src = ["group:admin"], dst = ["*:*"] },
 
-    // developer: 访问开发服务器 + Web 服务
+    // developer: access dev servers + web services
     { action = "accept", src = ["group:developer"], dst = ["tag:server:80,443,22", "tag:workstation:*"] },
 
-    // viewer: 只读访问 Web 服务
+    // viewer: read-only access to web services
     { action = "accept", src = ["group:viewer"], dst = ["tag:server:80,443"] },
 
-    // monitoring: 访问监控端口
+    // monitoring: access monitoring ports
     { action = "accept", src = ["tag:monitoring"], dst = ["tag:server:9090,9093,3000,9100"] },
 
-    // 默认拒绝
+    // Default deny
     { action = "deny", src = ["*"], dst = ["*:*"] },
 ];
 
-// ── SSH 规则 ──
+// ── SSH rules ──
 ssh = [
-    // admin 可 SSH 到所有服务器
+    // admin can SSH to all servers
     { action = "accept", src = ["group:admin"], dst = ["tag:server"] },
-    // developer 可 SSH 到开发服务器
+    // developer can SSH to dev servers
     { action = "accept", src = ["group:developer"], dst = ["tag:server"] },
 ];
 
-// ── 测试规则 ──
+// ── Test rules ──
 tests = [
     { src = "admin@zt.vps.local", accept = ["tag:server:22", "tag:server:443"] },
     { src = "dev@zt.vps.local", accept = ["tag:server:443"], deny = ["tag:server:22"] },
@@ -299,12 +299,12 @@ This ACL defines zero trust access rules for the Headscale mesh network.
 The `tests` section includes automated test cases to verify ACL correctness.
 EOF
 
-    echo -e "${C_OK}ACL 配置已生成到: $OUTPUT_DIR/headscale-acl.huac${C_RST}"
+    echo -e "${C_OK}ACL config generated to: $OUTPUT_DIR/headscale-acl.huac${C_RST}"
 }
 
-# ── CrowdSec 集成配置 ────────────────────────────────────────
+# ── CrowdSec integration config ────────────────────────────────────────
 generate_crowdsec_config() {
-    echo -e "${C_WARN}>>> 生成 CrowdSec 集成配置 <<<${C_RST}"
+    echo -e "${C_WARN}>>> Generate CrowdSec integration config <<<${C_RST}"
     mkdir -p "$OUTPUT_DIR/crowdsec"
 
     # CrowdSec acquisition for Headscale logs
@@ -405,12 +405,12 @@ Integrates CrowdSec threat detection with Headscale/WireGuard for automated bloc
 4. Restart CrowdSec: `systemctl restart crowdsec`
 EOF
 
-    echo -e "${C_OK}CrowdSec 集成配置已生成到: $OUTPUT_DIR/crowdsec/${C_RST}"
+    echo -e "${C_OK}CrowdSec integration config generated to: $OUTPUT_DIR/crowdsec/${C_RST}"
 }
 
-# ── GeoIP 过滤配置 ───────────────────────────────────────────
+# ── GeoIP filtering config ───────────────────────────────────────────
 generate_geoip_config() {
-    echo -e "${C_WARN}>>> 生成 GeoIP 过滤配置 <<<${C_RST}"
+    echo -e "${C_WARN}>>> Generate GeoIP filtering config <<<${C_RST}"
     mkdir -p "$OUTPUT_DIR/geoip"
 
     # GeoIP-based ACL extension
@@ -481,77 +481,77 @@ Adds country-level IP filtering to the WireGuard/Headscale mesh network.
 - Combine with CrowdSec for behavioral detection
 EOF
 
-    echo -e "${C_OK}GeoIP 过滤配置已生成到: $OUTPUT_DIR/geoip/${C_RST}"
+    echo -e "${C_OK}GeoIP filtering config generated to: $OUTPUT_DIR/geoip/${C_RST}"
 }
 
-# ── 审计模式 ─────────────────────────────────────────────────
+# ── Audit mode ─────────────────────────────────────────────────
 audit_zerotrust() {
-    echo -e "${C_WARN}>>> 零信任网络审计 <<<${C_RST}"
-    echo -e "${C_INFO}只读模式, 不修改任何配置${C_RST}"
+    echo -e "${C_WARN}>>> Zero-trust network audit <<<${C_RST}"
+    echo -e "${C_INFO}Read-only mode, no configuration modified${C_RST}"
     echo ""
 
     init_report
 
-    echo -e "${C_INFO}── WireGuard 检查 ──${C_RST}"
+    echo -e "${C_INFO}── WireGuard check ──${C_RST}"
 
-    run_check "WG-1.1" "WireGuard 已安装" \
+    run_check "WG-1.1" "WireGuard Installed" \
         command -v wg
 
-    run_check "WG-1.2" "WireGuard 内核模块已加载" \
+    run_check "WG-1.2" "WireGuard kernel module loaded" \
         bash -c "lsmod | grep -q wireguard && echo 'module loaded' && return 0 || modprobe wireguard 2>/dev/null && echo 'module loaded after modprobe' && return 0 || echo 'module not loaded' && return 2"
 
-    run_check "WG-1.3" "WireGuard 接口已启动" \
+    run_check "WG-1.3" "WireGuard interface is up" \
         bash -c "ip link show wg0 2>/dev/null | grep -q 'UP' && echo 'wg0 is UP' && return 0 || echo 'wg0 not found or down' && return 2"
 
-    run_check "WG-1.4" "IP 转发已启用" \
+    run_check "WG-1.4" "IP forwarding enabled" \
         bash -c "sysctl net.ipv4.ip_forward 2>/dev/null | grep -q '=1' && echo 'ip_forward enabled' && return 0 || echo 'ip_forward disabled' && return 1"
 
-    run_check "WG-1.5" "WireGuard 配置文件权限" \
+    run_check "WG-1.5" "WireGuard config file permissions" \
         bash -c "find /etc/wireguard -name '*.conf' -perm 600 2>/dev/null | head -1 | grep -q . && echo 'config files are 600' && return 0 || echo 'no 600 config found' && return 2"
 
     echo ""
-    echo -e "${C_INFO}── Headscale 检查 ──${C_RST}"
+    echo -e "${C_INFO}── Headscale check ──${C_RST}"
 
-    run_check "HS-2.1" "Headscale 已安装" \
+    run_check "HS-2.1" "Headscale Installed" \
         command -v headscale
 
-    run_check "HS-2.2" "Headscale 服务运行中" \
+    run_check "HS-2.2" "Headscale service running" \
         bash -c "systemctl is-active headscale 2>/dev/null | grep -q active && echo 'service active' && return 0 || echo 'service not active' && return 2"
 
-    run_check "HS-2.3" "Headscale 配置文件存在" \
+    run_check "HS-2.3" "Headscale config file exists" \
         bash -c "[ -f /etc/headscale/config.yaml ] && echo 'config exists' && return 0 || echo 'config not found' && return 2"
 
-    run_check "HS-2.4" "Headscale ACL 已配置" \
+    run_check "HS-2.4" "Headscale ACL configured" \
         bash -c "grep -q 'acl_path' /etc/headscale/config.yaml 2>/dev/null && echo 'ACL configured' && return 0 || echo 'ACL not configured' && return 2"
 
-    run_check "HS-2.5" "Headscale 监听 127.0.0.1" \
+    run_check "HS-2.5" "Headscale listening on 127.0.0.1" \
         bash -c "grep -q '127.0.0.1' /etc/headscale/config.yaml 2>/dev/null && echo 'listening on localhost' && return 0 || echo 'may be listening on all interfaces' && return 2"
 
     echo ""
-    echo -e "${C_INFO}── CrowdSec 集成检查 ──${C_RST}"
+    echo -e "${C_INFO}── CrowdSec integration check ──${C_RST}"
 
-    run_check "CS-3.1" "CrowdSec 已安装" \
+    run_check "CS-3.1" "CrowdSec Installed" \
         command -v cscli
 
-    run_check "CS-3.2" "Headscale 日志采集已配置" \
+    run_check "CS-3.2" "Headscale log collection configured" \
         bash -c "grep -q 'headscale' /etc/crowdsec/acquis.yaml 2>/dev/null && echo 'headscale acquisition configured' && return 0 || echo 'headscale acquisition not configured' && return 2"
 
-    run_check "CS-3.3" "WireGuard 日志采集已配置" \
+    run_check "CS-3.3" "WireGuard log collection configured" \
         bash -c "grep -q 'wireguard' /etc/crowdsec/acquis.yaml 2>/dev/null && echo 'wireguard acquisition configured' && return 0 || echo 'wireguard acquisition not configured' && return 2"
 
     echo ""
-    echo -e "${C_INFO}── 网络安全检查 ──${C_RST}"
+    echo -e "${C_INFO}── Network security check ──${C_RST}"
 
-    run_check "NET-4.1" "WireGuard 使用非默认端口" \
+    run_check "NET-4.1" "WireGuard uses non-default port" \
         bash -c "port=\$(grep -oP 'ListenPort\s*=\s*\K\d+' /etc/wireguard/wg0.conf 2>/dev/null || echo '51820'); [ \"\$port\" != '51820' ] && echo \"port: \$port\" && return 0 || echo 'using default port 51820' && return 2"
 
-    run_check "NET-4.2" "WireGuard 私钥权限正确" \
+    run_check "NET-4.2" "WireGuard private key permissions correct" \
         bash -c "find /etc/wireguard -name '*.conf' -perm 600 2>/dev/null | head -1 | grep -q . && echo 'private key files are 600' && return 0 || echo 'private key files may be world-readable' && return 1"
 
-    run_check "NET-4.3" "Headscale 使用 TLS" \
+    run_check "NET-4.3" "Headscale uses TLS" \
         bash -c "grep -q 'tls_letsencrypt' /etc/headscale/config.yaml 2>/dev/null && echo 'TLS configured' && return 0 || echo 'TLS not configured' && return 2"
 
-    # 摘要
+    # Summary
     echo ""
     echo -e "${C_INFO}╔══════════════════════════════════════════╗${C_RST}"
     echo -e "${C_INFO}║  Zero Trust Audit Summary                  ║${C_RST}"
@@ -563,10 +563,10 @@ audit_zerotrust() {
     printf "  ${C_INFO}SKIP${C_RST}: %d\n" "$COUNT_SKIP"
     printf "  Total: %d\n" "$TOTAL_CHECKS"
     echo ""
-    echo -e "报告: $REPORT_FILE"
+    echo -e "Report: $REPORT_FILE"
 }
 
-# ── 交互式模式 ───────────────────────────────────────────────
+# ── Interactive mode ───────────────────────────────────────────────
 interactive_mode() {
     echo -e "${C_INFO}╔══════════════════════════════════════════╗${C_RST}"
     echo -e "${C_INFO}║  Zero Trust Network Setup Wizard           ║${C_RST}"
@@ -574,17 +574,17 @@ interactive_mode() {
     echo -e "${C_INFO}╚══════════════════════════════════════════╝${C_RST}"
     echo ""
 
-    echo -e "${C_INFO}选择操作:${C_RST}"
-    echo -e "  ${C_WARN}1.${C_RST} 安装 WireGuard"
-    echo -e "  ${C_WARN}2.${C_RST} 安装 Headscale"
-    echo -e "  ${C_WARN}3.${C_RST} 生成 ACL 配置"
-    echo -e "  ${C_WARN}4.${C_RST} 生成 CrowdSec 集成配置"
-    echo -e "  ${C_WARN}5.${C_RST} 生成 GeoIP 过滤配置"
-    echo -e "  ${C_WARN}6.${C_RST} 审计现有零信任配置 (只读)"
-    echo -e "  ${C_WARN}0.${C_RST} 退出"
+    echo -e "${C_INFO}Select operation:${C_RST}"
+    echo -e "  ${C_WARN}1.${C_RST} Install WireGuard"
+    echo -e "  ${C_WARN}2.${C_RST} Install Headscale"
+    echo -e "  ${C_WARN}3.${C_RST} Generate ACL config"
+    echo -e "  ${C_WARN}4.${C_RST} Generate CrowdSec integration config"
+    echo -e "  ${C_WARN}5.${C_RST} Generate GeoIP filtering config"
+    echo -e "  ${C_WARN}6.${C_RST} Audit existing zero-trust config (read-only)"
+    echo -e "  ${C_WARN}0.${C_RST} Exit"
     echo ""
     local pick
-    read -r -p "❯ 选择 [0-6]: " pick
+    read -r -p "Select [0-6]: " pick
     case $pick in
         1) install_wireguard ;;
         2) install_headscale ;;
@@ -592,12 +592,12 @@ interactive_mode() {
         4) generate_crowdsec_config ;;
         5) generate_geoip_config ;;
         6) audit_zerotrust || true ;;
-        0) echo "退出"; exit 0 ;;
-        *) echo -e "${C_FAIL}无效输入${C_RST}"; exit 1 ;;
+        0) echo "Exit"; exit 0 ;;
+        *) echo -e "${C_FAIL}Invalid input${C_RST}"; exit 1 ;;
     esac
 }
 
-# ── 主流程 ───────────────────────────────────────────────────
+# ── Main flow ───────────────────────────────────────────────────
 main() {
     parse_args "$@"
 
@@ -609,7 +609,7 @@ main() {
         geoip) generate_geoip_config ;;
         audit) audit_zerotrust || true ;;
         interactive) interactive_mode || true ;;
-        *) echo "未知模式: $MODE"; exit 1 ;;
+        *) echo "Unknown mode: $MODE"; exit 1 ;;
     esac
     return 0
 }

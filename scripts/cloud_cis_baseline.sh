@@ -1,31 +1,31 @@
 #!/bin/bash
 # ════════════════════════════════════════════════════════════
 #  cloud_cis_baseline.sh — Cloud Platform CIS Baseline Audit
-#  适用系统: 任何能访问云 CLI (aws/gcloud/az) 的 Linux 主机
-#  运行身份: 普通用户 (需云 CLI 已认证)
-#  审计模式: 只读, 不修改任何云资源
-#  参考: CIS AWS Foundations Benchmark v3.0
+#  Supported OS: Any Linux host with cloud CLI access (aws/gcloud/az)
+#  Run as: Regular user (requires authenticated cloud CLI)
+#  Audit mode: Read-only, no modifications to cloud resources
+#  Reference: CIS AWS Foundations Benchmark v3.0
 #         CIS Google Cloud Platform Foundation Benchmark v3.0
 #         CIS Microsoft Azure Foundations Benchmark v4.0
 #         nozaq/terraform-aws-secure-baseline (1198 stars)
-#  项目主页: https://github.com/0x10debug/vps-security-enhancement-scripts
+#  Project home: https://github.com/0x10debug/vps-security-enhancement-scripts
 # ════════════════════════════════════════════════════════════
 #
-# 用法:
-#   ./scripts/cloud_cis_baseline.sh                     # 自动探测已安装的云 CLI 并审计
-#   ./scripts/cloud_cis_baseline.sh --provider aws      # 只审计 AWS
-#   ./scripts/cloud_cis_baseline.sh --provider gcp      # 只审计 GCP
-#   ./scripts/cloud_cis_baseline.sh --provider azure    # 只审计 Azure
-#   ./scripts/cloud_cis_baseline.sh --json              # 输出 JSON 报告路径
-#   ./scripts/cloud_cis_baseline.sh --quiet             # 只输出摘要
-#   ./scripts/cloud_cis_baseline.sh --section iam       # 只审计 IAM 章节
-#   ./scripts/cloud_cis_baseline.sh --section network   # 只审计网络章节
-#   ./scripts/cloud_cis_baseline.sh --section logging   # 只审计日志章节
-#   ./scripts/cloud_cis_baseline.sh --section encryption # 只审计加密章节
+# Usage:
+#   ./scripts/cloud_cis_baseline.sh                     # Auto-detect installed cloud CLIs and audit
+#   ./scripts/cloud_cis_baseline.sh --provider aws      # Audit only AWS
+#   ./scripts/cloud_cis_baseline.sh --provider gcp      # Audit only GCP
+#   ./scripts/cloud_cis_baseline.sh --provider azure    # Audit only Azure
+#   ./scripts/cloud_cis_baseline.sh --json              # Output JSON report path
+#   ./scripts/cloud_cis_baseline.sh --quiet             # Summary only
+#   ./scripts/cloud_cis_baseline.sh --section iam       # Audit IAM section only
+#   ./scripts/cloud_cis_baseline.sh --section network   # Audit network section only
+#   ./scripts/cloud_cis_baseline.sh --section logging   # Audit logging section only
+#   ./scripts/cloud_cis_baseline.sh --section encryption # Audit encryption section only
 #
-# 退出码:
-#   0 — 审计完成
-#   1 — 参数错误 / 无云 CLI 可用
+# Exit codes:
+#   0 — Audit complete
+#   1 — Parameter error / No cloud CLI available
 
 set -euo pipefail
 
@@ -54,7 +54,7 @@ C_WARN='\033[0;33m'
 C_INFO='\033[0;34m'
 C_RST='\033[0m'
 
-# ── 参数解析 ─────────────────────────────────────────────────
+# ── Parameter parsing ─────────────────────────────────────────────────
 parse_args() {
     while [ $# -gt 0 ]; do
         case "$1" in
@@ -63,12 +63,12 @@ parse_args() {
             --quiet) QUIET=1; shift ;;
             --json) JSON_ONLY=1; shift ;;
             -h|--help) sed -n '2,22p' "$0"; exit 0 ;;
-            *) echo "未知参数: $1"; exit 1 ;;
+            *) echo "Unknown parameter: $1"; exit 1 ;;
         esac
     done
 }
 
-# ── 云 CLI 探测 ──────────────────────────────────────────────
+# ── Cloud CLI detection ──────────────────────────────────────────────
 detect_providers() {
     ACTIVE_PROVIDERS=""
     if command -v aws >/dev/null 2>&1 && aws sts get-caller-identity >/dev/null 2>&1; then
@@ -84,8 +84,8 @@ detect_providers() {
     ACTIVE_PROVIDERS=$(echo "$ACTIVE_PROVIDERS" | xargs)
 
     if [ -z "$ACTIVE_PROVIDERS" ]; then
-        echo -e "${C_FAIL}未检测到已认证的云 CLI (aws/gcloud/az)${C_RST}"
-        echo -e "${C_INFO}请安装并认证至少一个云 CLI${C_RST}"
+        echo -e "${C_FAIL}No authenticated cloud CLI detected (aws/gcloud/az)${C_RST}"
+        echo -e "${C_INFO}Please install and authenticate at least one cloud CLI${C_RST}"
         echo -e "${C_INFO}  AWS:   aws configure${C_RST}"
         echo -e "${C_INFO}  GCP:   gcloud auth login${C_RST}"
         echo -e "${C_INFO}  Azure: az login${C_RST}"
@@ -94,14 +94,14 @@ detect_providers() {
 
     if [ -n "$PROVIDER_FILTER" ]; then
         if ! echo "$ACTIVE_PROVIDERS" | grep -qw "$PROVIDER_FILTER"; then
-            echo -e "${C_FAIL}指定的 provider $PROVIDER_FILTER 未认证或未安装${C_RST}"
+            echo -e "${C_FAIL}Specified provider $PROVIDER_FILTER not authenticated or not installed${C_RST}"
             exit 1
         fi
         ACTIVE_PROVIDERS="$PROVIDER_FILTER"
     fi
 }
 
-# ── 报告初始化 ───────────────────────────────────────────────
+# ── Report initialization ───────────────────────────────────────────────
 init_report() {
     if ! mkdir -p "$REPORT_DIR" 2>/dev/null; then
         REPORT_DIR="/tmp/cloud-cis-audit"
@@ -120,7 +120,7 @@ init_report() {
     } > "$REPORT_TXT"
 }
 
-# ── 检查函数 ─────────────────────────────────────────────────
+# ── Check functions ─────────────────────────────────────────────────
 run_check() {
     local cis_id="$1" desc="$2"
     shift 2
@@ -290,7 +290,7 @@ audit_aws() {
             aws_logging_section
             aws_encryption_section
             ;;
-        *) echo "未知 AWS section: $SECTION_FILTER"; return ;;
+        *) echo "Unknown AWS section: $SECTION_FILTER"; return ;;
     esac
 }
 
@@ -376,7 +376,7 @@ audit_gcp() {
             gcp_logging_section
             gcp_encryption_section
             ;;
-        *) echo "未知 GCP section: $SECTION_FILTER"; return ;;
+        *) echo "Unknown GCP section: $SECTION_FILTER"; return ;;
     esac
 }
 
@@ -459,16 +459,16 @@ audit_azure() {
             azure_logging_section
             azure_encryption_section
             ;;
-        *) echo "未知 Azure section: $SECTION_FILTER"; return ;;
+        *) echo "Unknown Azure section: $SECTION_FILTER"; return ;;
     esac
 }
 
-# ── JSON 报告 ────────────────────────────────────────────────
+# ── JSON report ────────────────────────────────────────────────
 write_json_report() {
     echo "${JSON_RESULTS}]" > "$REPORT_JSON"
 }
 
-# ── 摘要 ─────────────────────────────────────────────────────
+# ── Summary ─────────────────────────────────────────────────────
 print_summary() {
     echo ""
     echo -e "${C_INFO}╔══════════════════════════════════════════╗${C_RST}"
@@ -483,13 +483,13 @@ print_summary() {
     printf "  ${C_INFO}SKIP${C_RST}: %d\n" "$COUNT_SKIP"
     printf "  Total: %d\n" "$TOTAL_CHECKS"
     echo ""
-    echo -e "报告: $REPORT_TXT"
+    echo -e "Report: $REPORT_TXT"
     if [ "$JSON_ONLY" -eq 1 ]; then
         echo -e "JSON: $REPORT_JSON"
     fi
 }
 
-# ── 主流程 ───────────────────────────────────────────────────
+# ── Main flow ───────────────────────────────────────────────────
 main() {
     parse_args "$@"
     detect_providers

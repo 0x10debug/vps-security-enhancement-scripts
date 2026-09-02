@@ -170,7 +170,7 @@ SecAuditLogFormat JSON
 From `secure-vps`, WAF is accessible via:
 
 ```
-B · 安全加固 → b9 WAF 部署 → Coraza + CRS v4
+B · Security hardening → b9 WAF deployment → Coraza + CRS v4
 ```
 
 ## Related Tools

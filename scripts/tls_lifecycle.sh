@@ -1,33 +1,33 @@
 #!/bin/bash
 # ════════════════════════════════════════════════════════════
 #  tls_lifecycle.sh — TLS Certificate Lifecycle Management
-#  适用系统: Linux 主机
-#  运行身份: root
-#  模式: 签发 + 续期 + 部署 + 监控 + 审计 (不直接修改运行中的反代)
-#  参考: acmesh-official/acme.sh
+#  Supported OS: Linux host
+#  Run as: root
+#  Mode: Issue + renew + deploy + monitor + audit (does not directly modify running reverse proxies)
+#  Reference: acmesh-official/acme.sh
 #         certbot/certbot
 #         fabriziosalmi/certmate
-#  项目主页: https://github.com/0x10debug/vps-security-enhancement-scripts
+#  Project home: https://github.com/0x10debug/vps-security-enhancement-scripts
 # ════════════════════════════════════════════════════════════
 #
-# 用法:
-#   sudo ./scripts/tls_lifecycle.sh                    # 交互式向导
-#   sudo ./scripts/tls_lifecycle.sh --install          # 安装 acme.sh
-#   sudo ./scripts/tls_lifecycle.sh --issue            # 签发证书 (需 --domain --dns 或 --standalone)
-#   sudo ./scripts/tls_lifecycle.sh --renew            # 续期所有证书
-#   sudo ./scripts/tls_lifecycle.sh --deploy           # 部署证书到反代 (需 --domain --proxy)
-#   sudo ./scripts/tls_lifecycle.sh --revoke           # 撤销证书 (需 --domain)
-#   sudo ./scripts/tls_lifecycle.sh --monitor          # 监控证书过期状态
-#   sudo ./scripts/tls_lifecycle.sh --audit            # 只读审计 TLS 配置
+# Usage:
+#   sudo ./scripts/tls_lifecycle.sh                    # Interactive wizard
+#   sudo ./scripts/tls_lifecycle.sh --install          # Install acme.sh
+#   sudo ./scripts/tls_lifecycle.sh --issue            # Issue certificate (requires --domain --dns or --standalone)
+#   sudo ./scripts/tls_lifecycle.sh --renew            # Renew all certificates
+#   sudo ./scripts/tls_lifecycle.sh --deploy           # Deploy certificates to reverse proxy (requires --domain --proxy)
+#   sudo ./scripts/tls_lifecycle.sh --revoke           # Revoke certificate (requires --domain)
+#   sudo ./scripts/tls_lifecycle.sh --monitor          # Monitor certificate expiry status
+#   sudo ./scripts/tls_lifecycle.sh --audit            # Read-only audit TLS config
 #   sudo ./scripts/tls_lifecycle.sh --output ./tls-configs
 #   sudo ./scripts/tls_lifecycle.sh --domain example.com --dns cloudflare
 #   sudo ./scripts/tls_lifecycle.sh --domain example.com --standalone
 #   sudo ./scripts/tls_lifecycle.sh --domain example.com --proxy nginx
 #
-# 退出码:
-#   0 — 成功
-#   1 — 参数错误 / 依赖缺失
-#   2 — 部分功能不可用
+# Exit codes:
+#   0 — Success
+#   1 — Parameter error / missing dependency
+#   2 — Some features unavailable
 
 set -euo pipefail
 
@@ -57,7 +57,7 @@ C_WARN='\033[0;33m'
 C_INFO='\033[0;34m'
 C_RST='\033[0m'
 
-# ── 参数解析 ─────────────────────────────────────────────────
+# ── Parameter parsing ─────────────────────────────────────────────────
 parse_args() {
     while [ $# -gt 0 ]; do
         case "$1" in
@@ -76,7 +76,7 @@ parse_args() {
             --keytype) KEY_TYPE="$2"; shift 2 ;;
             --email) ACME_EMAIL="$2"; shift 2 ;;
             -h|--help) sed -n '2,30p' "$0"; exit 0 ;;
-            *) echo "未知参数: $1"; exit 1 ;;
+            *) echo "Unknown parameter: $1"; exit 1 ;;
         esac
     done
     if [ -z "$MODE" ]; then
@@ -87,7 +87,7 @@ parse_args() {
     fi
 }
 
-# ── 报告初始化 ───────────────────────────────────────────────
+# ── Report initialization ───────────────────────────────────────────────
 init_report() {
     mkdir -p "$REPORT_DIR" 2>/dev/null || REPORT_DIR="/tmp/tls-audit"
     mkdir -p "$REPORT_DIR" 2>/dev/null || true
@@ -102,7 +102,7 @@ init_report() {
     } > "$REPORT_FILE"
 }
 
-# ── 检查函数 ─────────────────────────────────────────────────
+# ── Check functions ─────────────────────────────────────────────────
 run_check() {
     local id="$1" desc="$2"
     shift 2
@@ -140,10 +140,10 @@ run_check() {
     } >> "$REPORT_FILE"
 }
 
-# ── 工具函数 ─────────────────────────────────────────────────
+# ── Utility functions ─────────────────────────────────────────────────
 check_root() {
     if [ "$(id -u)" -ne 0 ]; then
-        echo -e "${C_FAIL}请以 root 身份运行${C_RST}"
+        echo -e "${C_FAIL}Please run as root${C_RST}"
         exit 1
     fi
 }
@@ -155,26 +155,26 @@ check_cmd() {
 print_summary() {
     echo ""
     echo -e "${C_OK}══════════════════════════════${C_RST}"
-    echo -e "${C_OK}  审计总结${C_RST}"
+    echo -e "${C_OK}  Audit summary${C_RST}"
     echo -e "${C_OK}══════════════════════════════${C_RST}"
     printf "  ${C_OK}PASS${C_RST}: %d  ${C_FAIL}FAIL${C_RST}: %d  ${C_WARN}WARN${C_RST}: %d  ${C_INFO}SKIP${C_RST}: %d  Total: %d\n" \
         "$COUNT_PASS" "$COUNT_FAIL" "$COUNT_WARN" "$COUNT_SKIP" "$TOTAL_CHECKS"
-    echo -e "  报告: ${C_INFO}${REPORT_FILE}${C_RST}"
+    echo -e "  Report: ${C_INFO}${REPORT_FILE}${C_RST}"
 }
 
 wait_key() {
     echo ""
-    read -r -p "按回车继续..." _
+    read -r -p "Press Enter to continue..." _
 }
 
-# ── DNS 提供商列表 ────────────────────────────────────────────
+# ── DNS provider list ────────────────────────────────────────────
 show_dns_providers() {
     cat <<'EOF'
-支持的 DNS API 提供商 (acme.sh):
+Supported DNS API providers (acme.sh):
   cloudflare     — Cloudflare DNS API
   dpdns          — DNSPod
-  aliyun         — 阿里云 DNS
-  tencent        — 腾讯云 DNS
+  aliyun         — Aliyun DNS
+  tencent        — Tencent Cloud DNS
   aws            — AWS Route 53
   gcloud         — Google Cloud DNS
   azure          — Azure DNS
@@ -202,57 +202,57 @@ show_dns_providers() {
   hexonet        — Hexonet
   leaseweb       — LeaseWeb
 
-设置环境变量以提供 API 凭据, 例如:
+Set environment variables to provide API credentials, e.g.:
   export CF_Token="your_cloudflare_api_token"
   export CF_Zone_ID="your_zone_id"
   export Ali_Key="your_aliyun_key"
   export Ali_Secret="your_aliyun_secret"
 
-完整列表见: https://github.com/acmesh-official/acme.sh/wiki/dnsapi
+Full list at: https://github.com/acmesh-official/acme.sh/wiki/dnsapi
 EOF
 }
 
-# ── acme.sh 安装 ──────────────────────────────────────────────
+# ── acme.sh installation ──────────────────────────────────────────────
 install_acme() {
-    echo -e "${C_WARN}>>> 安装 acme.sh <<<${C_RST}"
+    echo -e "${C_WARN}>>> Install acme.sh <<<${C_RST}"
 
     if [ -f "$ACME_HOME/acme.sh" ]; then
-        echo -e "${C_INFO}acme.sh 已安装于 $ACME_HOME, 將尝试升级...${C_RST}"
+        echo -e "${C_INFO}acme.sh installed at $ACME_HOME, will attempt upgrade...${C_RST}"
         bash "$ACME_HOME/acme.sh" --upgrade 2>/dev/null || true
-        echo -e "${C_OK}acme.sh 已是最新${C_RST}"
+        echo -e "${C_OK}acme.sh is up to date${C_RST}"
         return 0
     fi
 
-    echo -e "${C_INFO}[1/3] 下载 acme.sh...${C_RST}"
+    echo -e "${C_INFO}[1/3] Download acme.sh...${C_RST}"
     curl -sL https://get.acme.sh -o /tmp/acme-install.sh || {
-        echo -e "${C_FAIL}下载失败, 请检查网络${C_RST}"
+        echo -e "${C_FAIL}Download failed, please check network${C_RST}"
         return 1
     }
 
-    echo -e "${C_INFO}[2/3] 安装 acme.sh 到 $ACME_HOME...${C_RST}"
+    echo -e "${C_INFO}[2/3] Install acme.sh to $ACME_HOME...${C_RST}"
     bash /tmp/acme-install.sh --home "$ACME_HOME" --accountemail "$ACME_EMAIL" 2>&1 | tail -5
     rm -f /tmp/acme-install.sh
 
-    echo -e "${C_INFO}[3/3] 设置默认 CA...${C_RST}"
+    echo -e "${C_INFO}[3/3] Set default CA...${C_RST}"
     bash "$ACME_HOME/acme.sh" --set-default-ca --server letsencrypt 2>/dev/null || true
 
-    echo -e "${C_OK}acme.sh 安装完成${C_RST}"
-    echo -e "${C_INFO}安装路径: $ACME_HOME/acme.sh${C_RST}"
-    echo -e "${C_INFO}默认 CA: Let's Encrypt${C_RST}"
-    echo -e "${C_INFO}账户邮箱: $ACME_EMAIL${C_RST}"
+    echo -e "${C_OK}acme.sh installation complete${C_RST}"
+    echo -e "${C_INFO}Install path: $ACME_HOME/acme.sh${C_RST}"
+    echo -e "${C_INFO}Default CA: Let's Encrypt${C_RST}"
+    echo -e "${C_INFO}Account email: $ACME_EMAIL${C_RST}"
 }
 
-# ── 证书签发 ──────────────────────────────────────────────────
+# ── Certificate issuance ──────────────────────────────────────────────────
 issue_cert() {
-    echo -e "${C_WARN}>>> 签发 TLS 证书 <<<${C_RST}"
+    echo -e "${C_WARN}>>> Issue TLS certificate <<<${C_RST}"
 
     if [ -z "$DOMAIN" ]; then
-        echo -e "${C_FAIL}请通过 --domain 指定域名${C_RST}"
+        echo -e "${C_FAIL}Please specify domain via --domain${C_RST}"
         return 1
     fi
 
     if [ ! -f "$ACME_HOME/acme.sh" ]; then
-        echo -e "${C_FAIL}acme.sh 未安装, 请先运行 --install${C_RST}"
+        echo -e "${C_FAIL}acme.sh not installed, please run --install first${C_RST}"
         return 1
     fi
 
@@ -265,77 +265,77 @@ issue_cert() {
         *) keylength="ec-256" ;;
     esac
 
-    echo -e "${C_INFO}域名: $DOMAIN${C_RST}"
-    echo -e "${C_INFO}密钥类型: $keylength${C_RST}"
+    echo -e "${C_INFO}Domain: $DOMAIN${C_RST}"
+    echo -e "${C_INFO}Key type: $keylength${C_RST}"
 
     local issue_cmd="$ACME_HOME/acme.sh --issue"
 
     if [ "$AUTH_MODE" = "dns" ]; then
         if [ -z "$DNS_PROVIDER" ]; then
-            echo -e "${C_FAIL}DNS 模式需要 --dns <provider>${C_RST}"
+            echo -e "${C_FAIL}DNS mode requires --dns <provider>${C_RST}"
             show_dns_providers
             return 1
         fi
-        echo -e "${C_INFO}验证方式: DNS-01 ($DNS_PROVIDER)${C_RST}"
+        echo -e "${C_INFO}Verification method: DNS-01 ($DNS_PROVIDER)${C_RST}"
         issue_cmd="$issue_cmd --dns $DNS_PROVIDER"
     elif [ "$AUTH_MODE" = "standalone" ]; then
-        echo -e "${C_INFO}验证方式: HTTP-01 (standalone)${C_RST}"
-        echo -e "${C_WARN}standalone 模式需要 80 端口空闲${C_RST}"
+        echo -e "${C_INFO}Verification method: HTTP-01 (standalone)${C_RST}"
+        echo -e "${C_WARN}standalone mode requires port 80 to be free${C_RST}"
         issue_cmd="$issue_cmd --standalone"
     else
-        echo -e "${C_FAIL}请指定验证方式: --dns <provider> 或 --standalone${C_RST}"
+        echo -e "${C_FAIL}Please specify verification method: --dns <provider> or --standalone${C_RST}"
         return 1
     fi
 
     issue_cmd="$issue_cmd -d $DOMAIN -k $keylength"
 
-    echo -e "${C_INFO}执行: $issue_cmd${C_RST}"
+    echo -e "${C_INFO}Execute: $issue_cmd${C_RST}"
     # shellcheck disable=SC2086
     bash $issue_cmd || {
-        echo -e "${C_FAIL}证书签发失败${C_RST}"
+        echo -e "${C_FAIL}Certificate issuance failed${C_RST}"
         return 1
     }
 
-    echo -e "${C_OK}证书签发成功: $DOMAIN${C_RST}"
-    echo -e "${C_INFO}证书路径: $ACME_HOME/${DOMAIN}_ecc/ (EC) 或 $ACME_HOME/${DOMAIN}/ (RSA)${C_RST}"
+    echo -e "${C_OK}Certificate issued successfully: $DOMAIN${C_RST}"
+    echo -e "${C_INFO}Certificate path: $ACME_HOME/${DOMAIN}_ecc/ (EC) or $ACME_HOME/${DOMAIN}/ (RSA)${C_RST}"
 }
 
-# ── 证书续期 ──────────────────────────────────────────────────
+# ── Certificate renewal ──────────────────────────────────────────────────
 renew_certs() {
-    echo -e "${C_WARN}>>> 续期所有证书 <<<${C_RST}"
+    echo -e "${C_WARN}>>> Renew all certificates <<<${C_RST}"
 
     if [ ! -f "$ACME_HOME/acme.sh" ]; then
-        echo -e "${C_FAIL}acme.sh 未安装${C_RST}"
+        echo -e "${C_FAIL}acme.sh Not installed${C_RST}"
         return 1
     fi
 
-    echo -e "${C_INFO}[1/2] 列出已签发证书...${C_RST}"
+    echo -e "${C_INFO}[1/2] List issued certificates...${C_RST}"
     bash "$ACME_HOME/acme.sh" --list 2>/dev/null || true
 
     echo ""
-    echo -e "${C_INFO}[2/2] 续期即将过期的证书...${C_RST}"
+    echo -e "${C_INFO}[2/2] Renew expiring certificates...${C_RST}"
     bash "$ACME_HOME/acme.sh" --renew-all 2>&1 || {
-        echo -e "${C_WARN}部分证书续期可能失败, 请检查上方输出${C_RST}"
+        echo -e "${C_WARN}Some certificate renewals may have failed, please check output above${C_RST}"
     }
 
-    echo -e "${C_OK}续期检查完成${C_RST}"
+    echo -e "${C_OK}Renewal check complete${C_RST}"
 }
 
-# ── 证书部署 ──────────────────────────────────────────────────
+# ── Certificate deployment ──────────────────────────────────────────────────
 deploy_cert() {
-    echo -e "${C_WARN}>>> 部署证书到反代 <<<${C_RST}"
+    echo -e "${C_WARN}>>> Deploy certificates to reverse proxy <<<${C_RST}"
 
     if [ -z "$DOMAIN" ]; then
-        echo -e "${C_FAIL}请通过 --domain 指定域名${C_RST}"
+        echo -e "${C_FAIL}Please specify domain via --domain${C_RST}"
         return 1
     fi
     if [ -z "$PROXY_TYPE" ]; then
-        echo -e "${C_FAIL}请通过 --proxy 指定反代类型 (nginx/caddy/haproxy/apache)${C_RST}"
+        echo -e "${C_FAIL}Please specify reverse proxy type via --proxy (nginx/caddy/haproxy/apache)${C_RST}"
         return 1
     fi
 
     if [ ! -f "$ACME_HOME/acme.sh" ]; then
-        echo -e "${C_FAIL}acme.sh 未安装${C_RST}"
+        echo -e "${C_FAIL}acme.sh Not installed${C_RST}"
         return 1
     fi
 
@@ -345,7 +345,7 @@ deploy_cert() {
     cert_dir="$ACME_HOME/${DOMAIN}_ecc"
     [ ! -d "$cert_dir" ] && cert_dir="$ACME_HOME/${DOMAIN}"
     if [ ! -d "$cert_dir" ]; then
-        echo -e "${C_FAIL}未找到 $DOMAIN 的证书, 请先签发${C_RST}"
+        echo -e "${C_FAIL}Certificate for $DOMAIN not found, please issue first${C_RST}"
         return 1
     fi
 
@@ -376,19 +376,19 @@ ssl_stapling_verify on;
 # HSTS
 add_header Strict-Transport-Security "max-age=63072000; includeSubDomains; preload" always;
 EOF
-            echo -e "${C_INFO}Nginx 配置已生成: $OUTPUT_DIR/deploy/nginx-ssl.conf${C_RST}"
-            echo -e "${C_WARN}部署步骤:${C_RST}"
+            echo -e "${C_INFO}Nginx config generated: $OUTPUT_DIR/deploy/nginx-ssl.conf${C_RST}"
+            echo -e "${C_WARN}Deployment steps:${C_RST}"
             echo "  1. mkdir -p $deploy_dir"
             echo "  2. cp $fullchain $deploy_dir/fullchain.cer"
             echo "  3. cp $keyfile $deploy_dir/${DOMAIN}.key"
-            echo "  4. 在 nginx server 块中 Include 上方配置"
+            echo "  4. Include the above config in nginx server block"
             echo "  5. nginx -t && systemctl reload nginx"
             ;;
         caddy)
             cat > "$OUTPUT_DIR/deploy/Caddyfile" <<EOF
 # Caddy TLS configuration for $DOMAIN
 # Generated by tls_lifecycle.sh
-# Caddy 自动管理 TLS, 此文件仅用于手动证书场景
+# Caddy auto-manages TLS, this file is only for manual certificate scenarios
 
 $DOMAIN {
     tls $fullchain $keyfile {
@@ -396,11 +396,11 @@ $DOMAIN {
         ciphers ECDHE-ECDSA-AES128-GCM-SHA256 ECDHE-RSA-AES128-GCM-SHA256 ECDHE-ECDSA-AES256-GCM-SHA384 ECDHE-RSA-AES256-GCM-SHA384
         alpn http/1.1 h2 h3
     }
-    # 反代到后端
+    # Reverse proxy to backend
     reverse_proxy localhost:8080
 }
 EOF
-            echo -e "${C_INFO}Caddyfile 已生成: $OUTPUT_DIR/deploy/Caddyfile${C_RST}"
+            echo -e "${C_INFO}Caddyfile generated: $OUTPUT_DIR/deploy/Caddyfile${C_RST}"
             ;;
         haproxy)
             cat > "$OUTPUT_DIR/deploy/haproxy-tls.cfg" <<EOF
@@ -415,8 +415,8 @@ frontend https-${DOMAIN}
 backend backend-${DOMAIN}
     server app1 127.0.0.1:8080 check
 EOF
-            echo -e "${C_INFO}HAProxy 配置已生成: $OUTPUT_DIR/deploy/haproxy-tls.cfg${C_RST}"
-            echo -e "${C_WARN}HAProxy 需要合并证书和私钥:${C_RST}"
+            echo -e "${C_INFO}HAProxy config generated: $OUTPUT_DIR/deploy/haproxy-tls.cfg${C_RST}"
+            echo -e "${C_WARN}HAProxy requires merging certificate and private key:${C_RST}"
             echo "  cat $fullchain $keyfile > $OUTPUT_DIR/deploy/${DOMAIN}-combined.pem"
             echo "  chmod 600 $OUTPUT_DIR/deploy/${DOMAIN}-combined.pem"
             ;;
@@ -444,16 +444,16 @@ EOF
     ProxyPassReverse / http://127.0.0.1:8080/
 </VirtualHost>
 EOF
-            echo -e "${C_INFO}Apache 配置已生成: $OUTPUT_DIR/deploy/apache-ssl.conf${C_RST}"
+            echo -e "${C_INFO}Apache config generated: $OUTPUT_DIR/deploy/apache-ssl.conf${C_RST}"
             ;;
         *)
-            echo -e "${C_FAIL}不支持的反代类型: $PROXY_TYPE (可选: nginx/caddy/haproxy/apache)${C_RST}"
+            echo -e "${C_FAIL}Unsupported reverse proxy type: $PROXY_TYPE (available: nginx/caddy/haproxy/apache)${C_RST}"
             return 1
             ;;
     esac
 
-    # 设置 acme.sh 自动部署 hook
-    echo -e "${C_INFO}设置 acme.sh 自动续期后部署 hook...${C_RST}"
+    # Set acme.sh auto-deploy hook
+    echo -e "${C_INFO}Setting acme.sh auto-renewal post-deploy hook...${C_RST}"
     local install_cert_cmd="$ACME_HOME/acme.sh --install-cert -d $DOMAIN"
     case "$PROXY_TYPE" in
         nginx)
@@ -475,51 +475,51 @@ EOF
             install_cert_cmd="$install_cert_cmd --reloadcmd 'systemctl reload apache2'"
             ;;
     esac
-    echo -e "${C_WARN}自动部署命令 (手动执行确认):${C_RST}"
+    echo -e "${C_WARN}Auto-deploy command (manually confirm execution):${C_RST}"
     echo "  $install_cert_cmd"
 }
 
-# ── 证书撤销 ──────────────────────────────────────────────────
+# ── Certificate revocation ──────────────────────────────────────────────────
 revoke_cert() {
-    echo -e "${C_WARN}>>> 撤销证书 <<<${C_RST}"
+    echo -e "${C_WARN}>>> Revoke certificate <<<${C_RST}"
 
     if [ -z "$DOMAIN" ]; then
-        echo -e "${C_FAIL}请通过 --domain 指定域名${C_RST}"
+        echo -e "${C_FAIL}Please specify domain via --domain${C_RST}"
         return 1
     fi
     if [ ! -f "$ACME_HOME/acme.sh" ]; then
-        echo -e "${C_FAIL}acme.sh 未安装${C_RST}"
+        echo -e "${C_FAIL}acme.sh Not installed${C_RST}"
         return 1
     fi
 
-    echo -e "${C_WARN}即将撤销 $DOMAIN 的证书, 此操作不可逆${C_RST}"
-    read -r -p "确认撤销? (y/N): " ack
+    echo -e "${C_WARN}About to revoke certificate for $DOMAIN, this operation is irreversible${C_RST}"
+    read -r -p "Confirm revoke? (y/N): " ack
     if [[ ! "$ack" =~ ^[Yy]$ ]]; then
-        echo -e "${C_INFO}已取消${C_RST}"
+        echo -e "${C_INFO}Cancelled${C_RST}"
         return 0
     fi
 
     bash "$ACME_HOME/acme.sh" --revoke -d "$DOMAIN" 2>&1 || {
-        echo -e "${C_FAIL}撤销失败${C_RST}"
+        echo -e "${C_FAIL}Revoke failed${C_RST}"
         return 1
     }
-    echo -e "${C_OK}证书已撤销: $DOMAIN${C_RST}"
+    echo -e "${C_OK}Certificate revoked: $DOMAIN${C_RST}"
 }
 
-# ── 证书监控 ──────────────────────────────────────────────────
+# ── Certificate monitoring ──────────────────────────────────────────────────
 monitor_certs() {
-    echo -e "${C_WARN}>>> 证书过期监控 <<<${C_RST}"
+    echo -e "${C_WARN}>>> Certificate expiry monitoring <<<${C_RST}"
 
-    echo -e "${C_INFO}扫描系统中的 TLS 证书...${C_RST}"
+    echo -e "${C_INFO}Scanning TLS certificates in system...${C_RST}"
     echo ""
 
     local found=0
     local now_epoch
     now_epoch=$(date +%s)
 
-    # 扫描 acme.sh 管理的证书
+    # Scan acme.sh managed certificates
     if [ -f "$ACME_HOME/acme.sh" ]; then
-        echo -e "${C_INFO}[acme.sh 管理的证书]${C_RST}"
+        echo -e "${C_INFO}[acme.sh managed certificates]${C_RST}"
         bash "$ACME_HOME/acme.sh" --list 2>/dev/null | tail -n +2 | while IFS= read -r line; do
             local d
             d=$(echo "$line" | awk '{print $1}')
@@ -548,8 +548,8 @@ monitor_certs() {
         echo ""
     fi
 
-    # 扫描常见证书路径
-    echo -e "${C_INFO}[系统证书文件]${C_RST}"
+    # Scan common certificate paths
+    echo -e "${C_INFO}[System certificate files]${C_RST}"
     local cert_paths=(
         "/etc/nginx/ssl"
         "/etc/caddy/ssl"
@@ -583,7 +583,7 @@ monitor_certs() {
         fi
     done
 
-    # 生成 cron 监控脚本
+    # Generate cron monitoring script
     mkdir -p "$OUTPUT_DIR"
     cat > "$OUTPUT_DIR/tls-monitor-cron.sh" <<'CRONEOF'
 #!/bin/bash
@@ -637,43 +637,43 @@ fi
 CRONEOF
     chmod +x "$OUTPUT_DIR/tls-monitor-cron.sh"
     echo ""
-    echo -e "${C_INFO}Cron 监控脚本已生成: $OUTPUT_DIR/tls-monitor-cron.sh${C_RST}"
-    echo -e "${C_INFO}添加到 crontab: 0 8 * * * $OUTPUT_DIR/tls-monitor-cron.sh${C_RST}"
+    echo -e "${C_INFO}Cron monitoring script generated: $OUTPUT_DIR/tls-monitor-cron.sh${C_RST}"
+    echo -e "${C_INFO}Added to crontab: 0 8 * * * $OUTPUT_DIR/tls-monitor-cron.sh${C_RST}"
 
     if [ "$found" -eq 0 ]; then
-        echo -e "${C_WARN}未找到任何证书文件${C_RST}"
+        echo -e "${C_WARN}No certificate files found${C_RST}"
     fi
 }
 
-# ── TLS 审计 ──────────────────────────────────────────────────
+# ── TLS audit ──────────────────────────────────────────────────
 audit_tls() {
-    echo -e "${C_WARN}>>> TLS 配置审计 (只读) <<<${C_RST}"
+    echo -e "${C_WARN}>>> TLS config audit (read-only) <<<${C_RST}"
     echo ""
     init_report
 
-    # --- acme.sh 状态 ---
-    echo -e "${C_INFO}[acme.sh 状态]${C_RST}"
-    run_check "TLS-001" "acme.sh 已安装" test -f "$ACME_HOME/acme.sh"
-    run_check "TLS-002" "acme.sh cron 自动续期已配置" \
+    # --- acme.sh status ---
+    echo -e "${C_INFO}[acme.sh status]${C_RST}"
+    run_check "TLS-001" "acme.sh Installed" test -f "$ACME_HOME/acme.sh"
+    run_check "TLS-002" "acme.sh cron auto-renewal configured" \
         bash -c "crontab -l 2>/dev/null | grep -q acme.sh"
-    run_check "TLS-003" "acme.sh 默认 CA 已设置" \
+    run_check "TLS-003" "acme.sh default CA set" \
         bash -c "bash $ACME_HOME/acme.sh --info 2>/dev/null | grep -qi 'server\|ca'"
 
-    # --- 证书状态 ---
+    # --- Certificate status ---
     echo ""
-    echo -e "${C_INFO}[证书状态]${C_RST}"
+    echo -e "${C_INFO}[Certificate status]${C_RST}"
 
     local now_epoch
     now_epoch=$(date +%s)
 
-    # 检查 acme.sh 管理的证书过期时间
+    # Check acme.sh managed certificate expiry
     if [ -f "$ACME_HOME/acme.sh" ]; then
         local cert_list
         cert_list=$(bash "$ACME_HOME/acme.sh" --list 2>/dev/null | tail -n +2)
         if [ -n "$cert_list" ]; then
             local cert_count
             cert_count=$(echo "$cert_list" | wc -l | tr -d ' ')
-            run_check "TLS-004" "已管理 $cert_count 个证书" test "$cert_count" -gt 0
+            run_check "TLS-004" "$cert_count certificates managed" test "$cert_count" -gt 0
 
             echo "$cert_list" | while IFS= read -r line; do
                 local d
@@ -689,28 +689,28 @@ audit_tls() {
                         if [ "$expiry_epoch" -gt 0 ]; then
                             local days_left=$(( (expiry_epoch - now_epoch) / 86400 ))
                             if [ "$days_left" -lt 0 ]; then
-                                run_check "TLS-005" "$d 证书未过期" bash -c "exit 1"
+                                run_check "TLS-005" "$d Certificate not expired" bash -c "exit 1"
                             elif [ "$days_left" -lt 15 ]; then
-                                run_check "TLS-005" "$d 证书未过期 ($days_left 天剩余)" bash -c "exit 1"
+                                run_check "TLS-005" "$d Certificate not expired ($days_left days remaining)" bash -c "exit 1"
                             elif [ "$days_left" -lt 30 ]; then
-                                run_check "TLS-005" "$d 证书未过期 ($days_left 天剩余)" bash -c "exit 2"
+                                run_check "TLS-005" "$d Certificate not expired ($days_left days remaining)" bash -c "exit 2"
                             else
-                                run_check "TLS-005" "$d 证书未过期 ($days_left 天剩余" true
+                                run_check "TLS-005" "$d Certificate not expired ($days_left days remaining" true
                             fi
                         fi
                     fi
                 fi
             done
         else
-            run_check "TLS-004" "已管理证书" bash -c "exit 2"
+            run_check "TLS-004" "Certificates managed" bash -c "exit 2"
         fi
     else
-        run_check "TLS-004" "已管理证书" bash -c "exit 2"
+        run_check "TLS-004" "Certificates managed" bash -c "exit 2"
     fi
 
-    # --- 证书密钥强度 ---
+    # --- Certificate key strength ---
     echo ""
-    echo -e "${C_INFO}[证书密钥强度]${C_RST}"
+    echo -e "${C_INFO}[Certificate key strength]${C_RST}"
 
     local found_cert=0
     for certfile in /etc/nginx/ssl/*/*.cer /etc/caddy/ssl/*/*.cer /etc/letsencrypt/live/*/fullchain.pem; do
@@ -722,50 +722,50 @@ audit_tls() {
         key_size=$(openssl x509 -in "$certfile" -noout -text 2>/dev/null | grep -oE "(256|384|2048|4096)" | head -1)
         if [ "$key_type" = "ec" ]; then
             if [ "$key_size" -ge 256 ]; then
-                run_check "TLS-006" "$certfile 密钥强度: EC-$key_size" true
+                run_check "TLS-006" "$certfile Key strength: EC-$key_size" true
             else
-                run_check "TLS-006" "$certfile 密钥强度: EC-$key_size (偏弱)" bash -c "exit 2"
+                run_check "TLS-006" "$certfile Key strength: EC-$key_size (weak)" bash -c "exit 2"
             fi
         elif [ "$key_type" = "rsa" ]; then
             if [ "$key_size" -ge 2048 ]; then
-                run_check "TLS-006" "$certfile 密钥强度: RSA-$key_size" true
+                run_check "TLS-006" "$certfile Key strength: RSA-$key_size" true
             else
-                run_check "TLS-006" "$certfile 密钥强度: RSA-$key_size (偏弱)" bash -c "exit 1"
+                run_check "TLS-006" "$certfile Key strength: RSA-$key_size (weak)" bash -c "exit 1"
             fi
         fi
     done
-    [ "$found_cert" -eq 0 ] && run_check "TLS-006" "证书密钥强度检查" bash -c "exit 2"
+    [ "$found_cert" -eq 0 ] && run_check "TLS-006" "Certificate key strength check" bash -c "exit 2"
 
-    # --- TLS 协议版本 ---
+    # --- TLS protocol versions ---
     echo ""
-    echo -e "${C_INFO}[TLS 协议版本]${C_RST}"
+    echo -e "${C_INFO}[TLS protocol versions]${C_RST}"
 
     # Nginx
     if check_cmd nginx; then
         local nginx_ssl
         nginx_ssl=$(nginx -T 2>/dev/null | grep -i "ssl_protocols" | head -1)
         if echo "$nginx_ssl" | grep -qi "TLSv1.3"; then
-            run_check "TLS-007" "Nginx 启用 TLS 1.3" true
+            run_check "TLS-007" "Nginx enables TLS 1.3" true
         elif echo "$nginx_ssl" | grep -qi "TLSv1.2"; then
-            run_check "TLS-007" "Nginx 启用 TLS 1.3 (仅 1.2)" bash -c "exit 2"
+            run_check "TLS-007" "Nginx enables TLS 1.3 (only 1.2)" bash -c "exit 2"
         else
-            run_check "TLS-007" "Nginx 启用 TLS 1.3" bash -c "exit 2"
+            run_check "TLS-007" "Nginx enables TLS 1.3" bash -c "exit 2"
         fi
         if echo "$nginx_ssl" | grep -qi "TLSv1\b" && ! echo "$nginx_ssl" | grep -qi "TLSv1\.1"; then
-            run_check "TLS-008" "Nginx 禁用 TLS 1.0/1.1" true
+            run_check "TLS-008" "Nginx disables TLS 1.0/1.1" true
         else
-            run_check "TLS-008" "Nginx 禁用 TLS 1.0/1.1" bash -c "exit 2"
+            run_check "TLS-008" "Nginx disables TLS 1.0/1.1" bash -c "exit 2"
         fi
     else
         run_check "TLS-007" "Nginx TLS 1.3" bash -c "exit 2"
-        run_check "TLS-008" "Nginx 禁用 TLS 1.0/1.1" bash -c "exit 2"
+        run_check "TLS-008" "Nginx disables TLS 1.0/1.1" bash -c "exit 2"
     fi
 
     # Caddy
     if check_cmd caddy; then
-        run_check "TLS-009" "Caddy 自动 TLS 管理" true
+        run_check "TLS-009" "Caddy automatic TLS management" true
     else
-        run_check "TLS-009" "Caddy 自动 TLS 管理" bash -c "exit 2"
+        run_check "TLS-009" "Caddy automatic TLS management" bash -c "exit 2"
     fi
 
     # --- HSTS ---
@@ -776,40 +776,40 @@ audit_tls() {
         local nginx_hsts
         nginx_hsts=$(nginx -T 2>/dev/null | grep -i "Strict-Transport-Security" | head -1)
         if [ -n "$nginx_hsts" ]; then
-            run_check "TLS-010" "Nginx HSTS 已配置" true
+            run_check "TLS-010" "Nginx HSTS configured" true
         else
-            run_check "TLS-010" "Nginx HSTS 已配置" bash -c "exit 1"
+            run_check "TLS-010" "Nginx HSTS configured" bash -c "exit 1"
         fi
     else
         run_check "TLS-010" "Nginx HSTS" bash -c "exit 2"
     fi
 
-    # --- 证书自动续期 ---
+    # --- Certificate auto-renewal ---
     echo ""
-    echo -e "${C_INFO}[自动续期]${C_RST}"
+    echo -e "${C_INFO}[Auto-renewal]${C_RST}"
 
     if [ -f "$ACME_HOME/acme.sh" ]; then
         local cron_check
         cron_check=$(crontab -l 2>/dev/null | grep -c "acme.sh.*cron" || true)
         if [ "$cron_check" -gt 0 ]; then
-            run_check "TLS-011" "acme.sh cron 自动续期已配置" true
+            run_check "TLS-011" "acme.sh cron auto-renewal configured" true
         else
-            run_check "TLS-011" "acme.sh cron 自动续期已配置" bash -c "exit 1"
+            run_check "TLS-011" "acme.sh cron auto-renewal configured" bash -c "exit 1"
         fi
     else
-        run_check "TLS-011" "acme.sh cron 自动续期" bash -c "exit 2"
+        run_check "TLS-011" "acme.sh cron auto-renewal" bash -c "exit 2"
     fi
 
     if check_cmd certbot; then
         local certbot_timer
         certbot_timer=$(systemctl list-timers 2>/dev/null | grep -c certbot || true)
         if [ "$certbot_timer" -gt 0 ]; then
-            run_check "TLS-012" "certbot 自动续期 timer 已配置" true
+            run_check "TLS-012" "certbot auto-renewal timer configured" true
         else
-            run_check "TLS-012" "certbot 自动续期 timer 已配置" bash -c "exit 2"
+            run_check "TLS-012" "certbot auto-renewal timer configured" bash -c "exit 2"
         fi
     else
-        run_check "TLS-012" "certbot 自动续期 timer" bash -c "exit 2"
+        run_check "TLS-012" "certbot auto-renewal timer" bash -c "exit 2"
     fi
 
     # --- OCSP Stapling ---
@@ -820,9 +820,9 @@ audit_tls() {
         local nginx_ocsp
         nginx_ocsp=$(nginx -T 2>/dev/null | grep -i "ssl_stapling" | head -1)
         if [ -n "$nginx_ocsp" ]; then
-            run_check "TLS-013" "Nginx OCSP Stapling 已配置" true
+            run_check "TLS-013" "Nginx OCSP Stapling configured" true
         else
-            run_check "TLS-013" "Nginx OCSP Stapling 已配置" bash -c "exit 2"
+            run_check "TLS-013" "Nginx OCSP Stapling configured" bash -c "exit 2"
         fi
     else
         run_check "TLS-013" "Nginx OCSP Stapling" bash -c "exit 2"
@@ -831,69 +831,69 @@ audit_tls() {
     print_summary
 }
 
-# ── 交互式向导 ────────────────────────────────────────────────
+# ── Interactive wizard ────────────────────────────────────────────────
 interactive_wizard() {
     while true; do
         clear
         echo -e "${C_OK}══════════════════════════════${C_RST}"
-        echo -e "${C_OK}   TLS 证书生命周期管理      ${C_RST}"
+        echo -e "${C_OK}   TLS certificate lifecycle management      ${C_RST}"
         echo -e "${C_OK}══════════════════════════════${C_RST}"
-        echo -e "  ${C_WARN}1.${C_RST} 📦 安装 acme.sh"
-        echo -e "  ${C_WARN}2.${C_RST} 🔑 签发证书"
-        echo -e "  ${C_WARN}3.${C_RST} 🔄 续期所有证书"
-        echo -e "  ${C_WARN}4.${C_RST} 📋 部署证书到反代"
-        echo -e "  ${C_WARN}5.${C_RST} ❌ 撤销证书"
-        echo -e "  ${C_WARN}6.${C_RST} 📊 监控证书过期"
-        echo -e "  ${C_WARN}7.${C_RST} 🛡️ 审计 TLS 配置 (只读)"
-        echo -e "  ${C_WARN}8.${C_RST} 📋 显示 DNS 提供商列表"
-        echo -e "  ${C_WARN}0.${C_RST} 返回"
+        echo -e "  ${C_WARN}1.${C_RST} 📦 Install acme.sh"
+        echo -e "  ${C_WARN}2.${C_RST} 🔑 Issue certificate"
+        echo -e "  ${C_WARN}3.${C_RST} 🔄 Renew all certificates"
+        echo -e "  ${C_WARN}4.${C_RST} 📋 Deploy certificates to reverse proxy"
+        echo -e "  ${C_WARN}5.${C_RST} ❌ Revoke certificate"
+        echo -e "  ${C_WARN}6.${C_RST} 📊 Monitor certificate expiry"
+        echo -e "  ${C_WARN}7.${C_RST} 🛡️ Audit TLS config (read-only)"
+        echo -e "  ${C_WARN}8.${C_RST} 📋 Show DNS provider list"
+        echo -e "  ${C_WARN}0.${C_RST} Back"
         echo
         local pick
-        read -r -p "❯ 选择 [0-8]: " pick
+        read -r -p "Select [0-8]: " pick
         case $pick in
             1) install_acme; wait_key ;;
             2)
-                read -r -p "域名: " DOMAIN
-                echo "验证方式: 1) DNS-01  2) HTTP-01 (standalone)"
-                read -r -p "选择 [1-2]: " am
+                read -r -p "Domain: " DOMAIN
+                echo "Verification method: 1) DNS-01  2) HTTP-01 (standalone)"
+                read -r -p "Select [1-2]: " am
                 case $am in
                     1)
-                        read -r -p "DNS 提供商 (如 cloudflare): " DNS_PROVIDER
+                        read -r -p "DNS provider (e.g. cloudflare): " DNS_PROVIDER
                         AUTH_MODE="dns"
                         ;;
                     2) AUTH_MODE="standalone" ;;
-                    *) echo "无效"; sleep 1; continue ;;
+                    *) echo "Invalid"; sleep 1; continue ;;
                 esac
                 issue_cert; wait_key
                 ;;
             3) renew_certs; wait_key ;;
             4)
-                read -r -p "域名: " DOMAIN
-                echo "反代类型: 1) Nginx  2) Caddy  3) HAProxy  4) Apache"
-                read -r -p "选择 [1-4]: " pt
+                read -r -p "Domain: " DOMAIN
+                echo "Reverse proxy type: 1) Nginx  2) Caddy  3) HAProxy  4) Apache"
+                read -r -p "Select [1-4]: " pt
                 case $pt in
                     1) PROXY_TYPE="nginx" ;;
                     2) PROXY_TYPE="caddy" ;;
                     3) PROXY_TYPE="haproxy" ;;
                     4) PROXY_TYPE="apache" ;;
-                    *) echo "无效"; sleep 1; continue ;;
+                    *) echo "Invalid"; sleep 1; continue ;;
                 esac
                 deploy_cert; wait_key
                 ;;
             5)
-                read -r -p "域名: " DOMAIN
+                read -r -p "Domain: " DOMAIN
                 revoke_cert; wait_key
                 ;;
             6) monitor_certs; wait_key ;;
             7) audit_tls; wait_key ;;
             8) show_dns_providers; wait_key ;;
             0) break ;;
-            *) echo -e "${C_FAIL}无效输入${C_RST}"; sleep 1 ;;
+            *) echo -e "${C_FAIL}Invalid input${C_RST}"; sleep 1 ;;
         esac
     done
 }
 
-# ── 主入口 ────────────────────────────────────────────────────
+# ── Main entry ────────────────────────────────────────────────────
 main() {
     parse_args "$@"
 
@@ -906,7 +906,7 @@ main() {
         monitor) check_root; monitor_certs ;;
         audit) audit_tls ;;
         interactive) interactive_wizard ;;
-        *) echo "未知模式: $MODE"; exit 1 ;;
+        *) echo "Unknown mode: $MODE"; exit 1 ;;
     esac
 }
 

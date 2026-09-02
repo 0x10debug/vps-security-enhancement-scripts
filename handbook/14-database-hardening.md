@@ -82,7 +82,7 @@ db-hardening-configs/
 From `secure-vps`, the database hardening is accessible via:
 
 ```
-D · 安全运维 → d6 数据库安全 → 数据库加固
+D · Security operations → d6 Database security → Database hardening
 ```
 
 ## Common Findings and Fixes

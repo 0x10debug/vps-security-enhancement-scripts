@@ -97,7 +97,7 @@ scp /tmp/evidence_* root@safe-machine:/incidents/$(date +%Y%m%d)/
 ### Login trails
 
 ```bash
-secure-vps  # c1 → 7 (登录轨迹 / Login Trail)
+secure-vps  # c1 → 7 (Login Trail)
 # Shows last 15 failed login attempts and recent login history
 ```
 
@@ -226,7 +226,7 @@ ls -la /etc/cron.hourly/
 ### rkhunter (rootkit hunter)
 
 ```bash
-secure-vps  # b4 → 7 (Rkhunter 防御)
+secure-vps  # b4 → 7 (Rkhunter defense)
 # Installs rkhunter, builds baseline, sets up daily cron scan
 # Daily scan logs to /var/log/rkhunter-cron.log
 ```
@@ -261,7 +261,7 @@ rkhunter --propupd    # update file property database after legitimate changes
 ### AIDE (file integrity)
 
 ```bash
-secure-vps  # b4 → 8 → 3 (AIDE 立即比对)
+secure-vps  # b4 → 8 → 3 (AIDE immediate comparison)
 # Compares current filesystem state against the baseline
 ```
 
@@ -535,7 +535,7 @@ apt list --upgradable
 ### Enable automatic security updates
 
 ```bash
-secure-vps  # b4 → 6 (自动安全更新)
+secure-vps  # b4 → 6 (Automatic security updates)
 # Enables unattended-upgrades (Debian/Ubuntu) or dnf-automatic (RHEL)
 # Installs security updates daily automatically
 ```

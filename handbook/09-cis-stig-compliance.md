@@ -72,7 +72,7 @@ The console output shows each check with its CIS ID, result (PASS/FAIL/WARN/SKIP
 From `secure-vps`, the CIS audit is accessible via:
 
 ```
-C · 纵深防御 → c3 审计与完整性 → CIS 合规审计
+C · Defense in depth → c3 Audit & integrity → CIS compliance audit
 ```
 
 This calls `scripts/cis_benchmark_audit.sh --level 1` and displays the summary.

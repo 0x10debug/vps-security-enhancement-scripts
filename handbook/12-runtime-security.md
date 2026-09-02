@@ -90,7 +90,7 @@ runtime-security-configs/
 From `secure-vps`, the runtime security setup is accessible via:
 
 ```
-D · 安全运维 → d1 容器安全 → 运行时安全部署
+D · Security operations → d1 Container security → Runtime security deployment
 ```
 
 ## Custom Falco Rules

@@ -1,22 +1,22 @@
 #!/bin/bash
 # ════════════════════════════════════════════════════════════
 #  docker_security_audit.sh — CIS Docker Benchmark Compliance Audit
-#  适用系统: 任何安装了 Docker 的 Linux 主机
-#  运行身份: root (推荐) 或 docker 组成员
-#  审计模式: 只读, 不修改任何 Docker 配置或容器
-#  参考: CIS Docker Benchmark v1.6.0
-#  项目主页: https://github.com/0x10debug/vps-security-enhancement-scripts
+#  Supported OS: Any Linux host with Docker installed
+#  Run as: root (recommended) or docker group member
+#  Audit mode: read-only, no Docker config or containers modified
+#  Reference: CIS Docker Benchmark v1.6.0
+#  Project home: https://github.com/0x10debug/vps-security-enhancement-scripts
 # ════════════════════════════════════════════════════════════
 #
-# 用法:
-#   sudo ./scripts/docker_security_audit.sh              # 完整审计
-#   sudo ./scripts/docker_security_audit.sh --json       # 输出 JSON 报告路径
-#   sudo ./scripts/docker_security_audit.sh --quiet      # 只输出摘要
-#   sudo ./scripts/docker_security_audit.sh --container <name>  # 审计特定容器
+# Usage:
+#   sudo ./scripts/docker_security_audit.sh              # Full audit
+#   sudo ./scripts/docker_security_audit.sh --json       # Output JSON report path
+#   sudo ./scripts/docker_security_audit.sh --quiet      # Summary only
+#   sudo ./scripts/docker_security_audit.sh --container <name>  # Audit specific container
 #
-# 退出码:
-#   0 — 审计完成
-#   1 — 参数错误 / Docker 未安装
+# Exit codes:
+#   0 — Audit complete
+#   1 — Parameter error / Docker not installed
 
 set -euo pipefail
 
@@ -43,7 +43,7 @@ C_WARN='\033[0;33m'
 C_INFO='\033[0;34m'
 C_RST='\033[0m'
 
-# ── 参数解析 ─────────────────────────────────────────────────
+# ── Parameter parsing ─────────────────────────────────────────────────
 parse_args() {
     while [ $# -gt 0 ]; do
         case "$1" in
@@ -51,20 +51,20 @@ parse_args() {
             --json) JSON_ONLY=1; shift ;;
             --container) TARGET_CONTAINER="$2"; shift 2 ;;
             -h|--help) sed -n '2,18p' "$0"; exit 0 ;;
-            *) echo "未知参数: $1"; exit 1 ;;
+            *) echo "Unknown parameter: $1"; exit 1 ;;
         esac
     done
 }
 
-# ── Docker 检查 ──────────────────────────────────────────────
+# ── Docker checks ──────────────────────────────────────────────
 check_docker_installed() {
     if ! command -v docker >/dev/null 2>&1; then
-        echo "Docker 未安装"
+        echo "Docker Not installed"
         exit 1
     fi
 }
 
-# ── 报告初始化 ───────────────────────────────────────────────
+# ── Report initialization ───────────────────────────────────────────────
 init_report() {
     mkdir -p "$REPORT_DIR" 2>/dev/null || true
     REPORT_TXT="$REPORT_DIR/docker-audit-${TIMESTAMP}.txt"
@@ -80,7 +80,7 @@ init_report() {
     } > "$REPORT_TXT"
 }
 
-# ── 检查函数 ─────────────────────────────────────────────────
+# ── Check functions ─────────────────────────────────────────────────
 run_check() {
     local cis_id="$1" desc="$2"
     shift 2
@@ -129,7 +129,7 @@ run_check() {
     fi
 }
 
-# ── 辅助 ─────────────────────────────────────────────────────
+# ── Helpers ─────────────────────────────────────────────────────
 get_docker_info() {
     docker info 2>/dev/null
 }
@@ -137,14 +137,14 @@ get_docker_info() {
 check_file_perm() {
     local path="$1" expected_perm="$2"
     if [ ! -e "$path" ]; then
-        echo "文件不存在: $path"; return 2
+        echo "File does not exist: $path"; return 2
     fi
     local actual
     actual=$(stat -c '%a' "$path" 2>/dev/null || stat -f '%Lp' "$path" 2>/dev/null)
     if [ "$actual" = "$expected_perm" ]; then
-        echo "权限 $actual"; return 0
+        echo "Permissions: $actual"; return 0
     else
-        echo "期望 $expected_perm, 实际 $actual"; return 1
+        echo "Expected $expected_perm, actual $actual"; return 1
     fi
 }
 
@@ -347,7 +347,7 @@ section_logging() {
         bash -c 'get_docker_info 2>/dev/null | grep -q "syslog\|fluentd\|gelf\|journald" && echo "central logging configured" && return 0 || echo "no central logging (default json-file)" && return 2'
 }
 
-# ── 摘要 ─────────────────────────────────────────────────────
+# ── Summary ─────────────────────────────────────────────────────
 print_summary() {
     local total=$TOTAL_CHECKS
     local pass_pct=0
@@ -395,7 +395,7 @@ write_json_report() {
 EOF
 }
 
-# ── 主流程 ───────────────────────────────────────────────────
+# ── Main flow ───────────────────────────────────────────────────
 main() {
     parse_args "$@"
     check_docker_installed

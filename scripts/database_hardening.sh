@@ -1,31 +1,31 @@
 #!/bin/bash
 # ════════════════════════════════════════════════════════════
 #  database_hardening.sh — Database Security Hardening (MySQL/PostgreSQL/Redis/MongoDB)
-#  适用系统: Linux 主机 (需数据库已安装或通过 Docker 运行)
-#  运行身份: root 或数据库 superuser
-#  模式: 只读审计 + 配置生成 (不直接修改运行中的数据库)
-#  参考: CIS MySQL Database Benchmark v2.0
+#  Supported OS: Linux host (requires database installed or running via Docker)
+#  Run as: root or database superuser
+#  Mode: Read-only audit + config generation (does not directly modify running databases)
+#  Reference: CIS MySQL Database Benchmark v2.0
 #         CIS PostgreSQL Benchmark v15.0
 #         CIS Redis Benchmark v1.0
 #         CIS MongoDB Benchmark v1.0
 #         OWASP Database Security Cheat Sheet
-#  项目主页: https://github.com/0x10debug/vps-security-enhancement-scripts
+#  Project home: https://github.com/0x10debug/vps-security-enhancement-scripts
 # ════════════════════════════════════════════════════════════
 #
-# 用法:
-#   sudo ./scripts/database_hardening.sh                    # 交互式向导
-#   sudo ./scripts/database_hardening.sh --audit            # 只读审计所有已检测数据库
-#   sudo ./scripts/database_hardening.sh --mysql            # 生成 MySQL 加固配置
-#   sudo ./scripts/database_hardening.sh --postgres         # 生成 PostgreSQL 加固配置
-#   sudo ./scripts/database_hardening.sh --redis            # 生成 Redis 加固配置
-#   sudo ./scripts/database_hardening.sh --mongodb          # 生成 MongoDB 加固配置
-#   sudo ./scripts/database_hardening.sh --output ./configs # 指定配置输出目录
-#   sudo ./scripts/database_hardening.sh --section auth     # 只审计认证章节
+# Usage:
+#   sudo ./scripts/database_hardening.sh                    # Interactive wizard
+#   sudo ./scripts/database_hardening.sh --audit            # Read-only audit all detected databases
+#   sudo ./scripts/database_hardening.sh --mysql            # Generate MySQL hardening config
+#   sudo ./scripts/database_hardening.sh --postgres         # Generate PostgreSQL hardening config
+#   sudo ./scripts/database_hardening.sh --redis            # Generate Redis hardening config
+#   sudo ./scripts/database_hardening.sh --mongodb          # Generate MongoDB hardening config
+#   sudo ./scripts/database_hardening.sh --output ./configs # Specify config output directory
+#   sudo ./scripts/database_hardening.sh --section auth     # Audit authentication section only
 #
-# 退出码:
-#   0 — 成功
-#   1 — 参数错误 / 无数据库可检测
-#   2 — 部分功能不可用
+# Exit codes:
+#   0 — Success
+#   1 — Parameter error / No database to detect
+#   2 — Some features unavailable
 
 set -euo pipefail
 # shellcheck disable=SC2154
@@ -53,7 +53,7 @@ C_WARN='\033[0;33m'
 C_INFO='\033[0;34m'
 C_RST='\033[0m'
 
-# ── 参数解析 ─────────────────────────────────────────────────
+# ── Parameter parsing ─────────────────────────────────────────────────
 parse_args() {
     while [ $# -gt 0 ]; do
         case "$1" in
@@ -65,7 +65,7 @@ parse_args() {
             --section) SECTION_FILTER="$2"; shift 2 ;;
             --output) OUTPUT_DIR="$2"; shift 2 ;;
             -h|--help) sed -n '2,24p' "$0"; exit 0 ;;
-            *) echo "未知参数: $1"; exit 1 ;;
+            *) echo "Unknown parameter: $1"; exit 1 ;;
         esac
     done
     if [ -z "$MODE" ]; then
@@ -76,7 +76,7 @@ parse_args() {
     fi
 }
 
-# ── 数据库探测 ───────────────────────────────────────────────
+# ── Database detection ───────────────────────────────────────────────
 detect_databases() {
     DETECTED_DBS=""
 
@@ -84,7 +84,7 @@ detect_databases() {
     if command -v mysql >/dev/null 2>&1 || command -v mariadb >/dev/null 2>&1; then
         DETECTED_DBS="$DETECTED_DBS mysql"
     fi
-    # Docker 中的 MySQL
+    # MySQL in Docker
     if command -v docker >/dev/null 2>&1; then
         if docker ps --format '{{.Image}}' 2>/dev/null | grep -qiE "mysql|mariadb"; then
             DETECTED_DBS="$DETECTED_DBS mysql"
@@ -124,7 +124,7 @@ detect_databases() {
     DETECTED_DBS=$(echo "$DETECTED_DBS" | xargs | tr ' ' '\n' | sort -u | tr '\n' ' ' | xargs)
 }
 
-# ── 报告初始化 ───────────────────────────────────────────────
+# ── Report initialization ───────────────────────────────────────────────
 init_report() {
     if ! mkdir -p "$REPORT_DIR" 2>/dev/null; then
         REPORT_DIR="/tmp/db-hardening"
@@ -143,7 +143,7 @@ init_report() {
     } > "$report"
 }
 
-# ── 检查函数 ─────────────────────────────────────────────────
+# ── Check functions ─────────────────────────────────────────────────
 run_check() {
     local cis_id="$1" desc="$2"
     shift 2
@@ -190,7 +190,7 @@ run_check() {
     fi
 }
 
-# ── MySQL 审计 ───────────────────────────────────────────────
+# ── MySQL audit ───────────────────────────────────────────────
 audit_mysql() {
     echo ""
     echo "━━━ MySQL/MariaDB CIS Benchmark ━━━"
@@ -202,7 +202,7 @@ audit_mysql() {
         mysql_cmd="mariadb"
     fi
 
-    echo -e "  ${C_INFO}── 认证与访问控制 ──${C_RST}"
+    echo -e "  ${C_INFO}── Authentication and access control ──${C_RST}"
 
     run_check "MYSQL-1.1" "Ensure root account has a password set" \
         bash -c "$mysql_cmd -u root -e 'SELECT user,host FROM mysql.user WHERE user=\"root\" AND authentication_string=\"\";' 2>/dev/null | grep -q . && echo 'root has empty password' && return 1 || echo 'root password set or no root user' && return 0"
@@ -216,7 +216,7 @@ audit_mysql() {
     run_check "MYSQL-1.4" "Ensure password validation plugin is installed" \
         bash -c "$mysql_cmd -u root -e 'SHOW PLUGINS;' 2>/dev/null | grep -qi 'validate_password' && echo 'validate_password installed' && return 0 || echo 'validate_password not installed' && return 2"
 
-    echo -e "  ${C_INFO}── 网络与连接 ──${C_RST}"
+    echo -e "  ${C_INFO}── Network and connectivity ──${C_RST}"
 
     run_check "MYSQL-2.1" "Ensure bind-address is not 0.0.0.0" \
         bash -c "val=\$($mysql_cmd -u root -e 'SHOW VARIABLES LIKE \"bind_address\";' -sN 2>/dev/null | awk '{print \$2}' || echo '*'); echo \"bind_address=\$val\"; [ \"\$val\" != \"*\" ] && [ \"\$val\" != \"0.0.0.0\" ] && return 0 || return 1"
@@ -227,7 +227,7 @@ audit_mysql() {
     run_check "MYSQL-2.3" "Ensure skip-networking is considered for local-only" \
         bash -c "$mysql_cmd -u root -e 'SHOW VARIABLES LIKE \"skip_networking\";' -sN 2>/dev/null | awk '{print \$2}' | grep -qi 'OFF' && echo 'networking enabled (check if needed)' && return 2 || echo 'networking disabled' && return 0"
 
-    echo -e "  ${C_INFO}── 数据与日志 ──${C_RST}"
+    echo -e "  ${C_INFO}── Data and logs ──${C_RST}"
 
     run_check "MYSQL-3.1" "Ensure log_error is set" \
         bash -c "val=$($mysql_cmd -u root -e 'SHOW VARIABLES LIKE \"log_error\";' -sN 2>/dev/null | awk '{print \$2}' || echo ''); [ -n \"\$val\" ] && echo \"log_error=\$val\" && return 0 || echo 'log_error not set' && return 2"
@@ -242,7 +242,7 @@ audit_mysql() {
         bash -c "$mysql_cmd -u root -e 'SHOW PLUGINS;' 2>/dev/null | grep -qiE 'audit|audit_log' && echo 'audit plugin installed' && return 0 || echo 'no audit plugin' && return 2"
 }
 
-# ── PostgreSQL 审计 ──────────────────────────────────────────
+# ── PostgreSQL audit ──────────────────────────────────────────
 audit_postgres() {
     echo ""
     echo "━━━ PostgreSQL CIS Benchmark ━━━"
@@ -250,7 +250,7 @@ audit_postgres() {
     local psql_cmd="psql"
     local psql_args="-U postgres -t -A"
 
-    echo -e "  ${C_INFO}── 认证与访问控制 ──${C_RST}"
+    echo -e "  ${C_INFO}── Authentication and access control ──${C_RST}"
 
     run_check "PG-1.1" "Ensure superuser has password set" \
         bash -c "$psql_cmd $psql_args -c \"SELECT COUNT(*) FROM pg_shadow WHERE passwd IS NULL AND usesuper='t';\" 2>/dev/null | grep -q '^0$' && echo 'all superusers have passwords' && return 0 || echo 'superuser with empty password' && return 1"
@@ -264,7 +264,7 @@ audit_postgres() {
     run_check "PG-1.4" "Ensure md5 authentication is not used" \
         bash -c "conf=\$(find /etc/postgresql /var/lib/postgresql -name pg_hba.conf 2>/dev/null | head -1); [ -n \"\$conf\" ] && grep -v '^#' \"\$conf\" | grep -v '^\s*\$' | grep -q 'md5' && echo 'md5 found (deprecated)' && return 1 || echo 'no md5 auth' && return 0"
 
-    echo -e "  ${C_INFO}── 网络与连接 ──${C_RST}"
+    echo -e "  ${C_INFO}── Network and connectivity ──${C_RST}"
 
     run_check "PG-2.1" "Ensure listen_addresses is not '*'" \
         bash -c "val=\$($psql_cmd $psql_args -c 'SHOW listen_addresses;' 2>/dev/null || echo '*'); echo \"listen_addresses=\$val\"; [ \"\$val\" != \"*\" ] && return 0 || return 1"
@@ -275,7 +275,7 @@ audit_postgres() {
     run_check "PG-2.3" "Ensure password_encryption is scram-sha-256" \
         bash -c "val=\$($psql_cmd $psql_args -c 'SHOW password_encryption;' 2>/dev/null || echo 'md5'); [ \"\$val\" = \"scram-sha-256\" ] && echo 'scram-sha-256' && return 0 || echo \"password_encryption=\$val\" && return 1"
 
-    echo -e "  ${C_INFO}── 数据与日志 ──${C_RST}"
+    echo -e "  ${C_INFO}── Data and logs ──${C_RST}"
 
     run_check "PG-3.1" "Ensure logging_collector is enabled" \
         bash -c "val=\$($psql_cmd $psql_args -c 'SHOW logging_collector;' 2>/dev/null || echo 'off'); [ \"\$val\" = \"on\" ] && echo 'logging_collector on' && return 0 || echo 'logging_collector off' && return 1"
@@ -290,14 +290,14 @@ audit_postgres() {
         bash -c "val=\$($psql_cmd $psql_args -c 'SHOW log_line_prefix;' 2>/dev/null || echo ''); echo \"\$val\" | grep -q '%m' && echo \"\$val\" | grep -q '%u' && echo 'prefix includes timestamp+user' && return 0 || echo 'prefix missing timestamp or user' && return 2"
 }
 
-# ── Redis 审计 ───────────────────────────────────────────────
+# ── Redis audit ───────────────────────────────────────────────
 audit_redis() {
     echo ""
     echo "━━━ Redis CIS Benchmark ━━━"
 
     local redis_cmd="redis-cli"
 
-    echo -e "  ${C_INFO}── 认证与访问控制 ──${C_RST}"
+    echo -e "  ${C_INFO}── Authentication and access control ──${C_RST}"
 
     run_check "REDIS-1.1" "Ensure requirepass is set" \
         bash -c "$redis_cmd CONFIG GET requirepass 2>/dev/null | tail -1 | grep -q . && echo 'requirepass set' && return 0 || echo 'no password set' && return 1"
@@ -305,7 +305,7 @@ audit_redis() {
     run_check "REDIS-1.2" "Ensure ACL is configured (Redis 6+)" \
         bash -c "$redis_cmd ACL LIST 2>/dev/null | grep -v 'user default' | grep -q . && echo 'ACL users configured' && return 0 || echo 'no custom ACL users' && return 2"
 
-    echo -e "  ${C_INFO}── 网络与连接 ──${C_RST}"
+    echo -e "  ${C_INFO}── Network and connectivity ──${C_RST}"
 
     run_check "REDIS-2.1" "Ensure bind is not 0.0.0.0" \
         bash -c "val=$($redis_cmd CONFIG GET bind 2>/dev/null | tail -1 || echo '0.0.0.0'); echo \"bind=\$val\"; [ \"\$val\" != \"0.0.0.0\" ] && [ \"\$val\" != \"\" ] && return 0 || return 1"
@@ -319,7 +319,7 @@ audit_redis() {
     run_check "REDIS-2.4" "Ensure TLS is enabled" \
         bash -c "$redis_cmd CONFIG GET tls-port 2>/dev/null | tail -1 | grep -qv '^0$' && echo 'TLS port set' && return 0 || echo 'TLS not configured' && return 2"
 
-    echo -e "  ${C_INFO}── 数据与安全 ──${C_RST}"
+    echo -e "  ${C_INFO}── Data and security ──${C_RST}"
 
     run_check "REDIS-3.1" "Ensure rename-command is used for dangerous commands" \
         bash -c "conf=\$(find /etc/redis /var/lib/redis -name 'redis.conf' 2>/dev/null | head -1); [ -n \"\$conf\" ] && grep -q 'rename-command' \"\$conf\" && echo 'rename-command configured' && return 0 || echo 'no rename-command' && return 2"
@@ -331,7 +331,7 @@ audit_redis() {
         bash -c "val=$($redis_cmd CONFIG GET maxmemory-policy 2>/dev/null | tail -1 || echo 'noeviction'); [ \"\$val\" != \"noeviction\" ] && echo \"policy=\$val\" && return 0 || echo 'policy=noeviction (default)' && return 2"
 }
 
-# ── MongoDB 审计 ─────────────────────────────────────────────
+# ── MongoDB audit ─────────────────────────────────────────────
 audit_mongodb() {
     echo ""
     echo "━━━ MongoDB CIS Benchmark ━━━"
@@ -343,7 +343,7 @@ audit_mongodb() {
         mongo_cmd="mongo"
     fi
 
-    echo -e "  ${C_INFO}── 认证与访问控制 ──${C_RST}"
+    echo -e "  ${C_INFO}── Authentication and access control ──${C_RST}"
 
     run_check "MONGO-1.1" "Ensure authentication is enabled" \
         bash -c "$mongo_cmd --quiet --eval 'db.runCommand({connectionStatus:1})' 2>/dev/null | grep -q 'authVersion' && echo 'auth may be enabled' && return 0 || echo 'auth status unclear' && return 2"
@@ -351,7 +351,7 @@ audit_mongodb() {
     run_check "MONGO-1.2" "Ensure no users with unnecessary roles" \
         bash -c "$mongo_cmd --quiet --eval 'db.getSiblingDB(\"admin\").system.users.find({}).toArray()' 2>/dev/null | grep -q . && echo 'users exist (check roles manually)' && return 2 || echo 'no users or cannot query' && return 2"
 
-    echo -e "  ${C_INFO}── 网络与连接 ──${C_RST}"
+    echo -e "  ${C_INFO}── Network and connectivity ──${C_RST}"
 
     run_check "MONGO-2.1" "Ensure bindIp is not 0.0.0.0" \
         bash -c "val=$($mongo_cmd --quiet --eval 'db.serverStatus().host' 2>/dev/null || echo 'unknown'); conf=\$(find /etc/mongod* -name '*.conf' 2>/dev/null | head -1); [ -n \"\$conf\" ] && grep -A5 'net:' \"\$conf\" | grep 'bindIp' | grep -q '0.0.0.0' && echo 'bindIp includes 0.0.0.0' && return 1 || echo 'bindIp restricted' && return 0"
@@ -362,7 +362,7 @@ audit_mongodb() {
     run_check "MONGO-2.3" "Ensure port is not default 27017 (or bound to localhost)" \
         bash -c "conf=\$(find /etc/mongod* -name '*.conf' 2>/dev/null | head -1); [ -n \"\$conf\" ] && port=\$(grep -A5 'net:' \"\$conf\" | grep 'port' | awk '{print \$2}' || echo 27017); [ \"\$port\" != \"27017\" ] && echo \"port=\$port\" && return 0 || echo 'default port (check bindIp)' && return 2"
 
-    echo -e "  ${C_INFO}── 数据与审计 ──${C_RST}"
+    echo -e "  ${C_INFO}── Data and audit ──${C_RST}"
 
     run_check "MONGO-3.1" "Ensure auditLog is configured" \
         bash -c "conf=\$(find /etc/mongod* -name '*.conf' 2>/dev/null | head -1); [ -n \"\$conf\" ] && grep -q 'auditLog' \"\$conf\" && echo 'auditLog configured' && return 0 || echo 'no auditLog' && return 2"
@@ -374,9 +374,9 @@ audit_mongodb() {
         bash -c "$mongo_cmd --quiet --eval 'db.serverStatus().dur' 2>/dev/null | grep -q . && echo 'journaling active' && return 0 || echo 'journaling status unclear' && return 2"
 }
 
-# ── 配置生成 ─────────────────────────────────────────────────
+# ── Config generation ─────────────────────────────────────────────────
 generate_mysql_config() {
-    echo -e "${C_WARN}>>> 生成 MySQL 加固配置 <<<${C_RST}"
+    echo -e "${C_WARN}>>> Generate MySQL hardening config <<<${C_RST}"
     mkdir -p "$OUTPUT_DIR/mysql"
     cat > "$OUTPUT_DIR/mysql/hardened-mysqld.cnf" <<'EOF'
 # MySQL/MariaDB Hardened Configuration
@@ -460,11 +460,11 @@ EOF
 4. Enable SSL (generate certificates first)
 5. Install audit plugin for compliance
 EOF
-    echo -e "${C_OK}MySQL 配置已生成到: $OUTPUT_DIR/mysql/${C_RST}"
+    echo -e "${C_OK}MySQL config generated to: $OUTPUT_DIR/mysql/${C_RST}"
 }
 
 generate_postgres_config() {
-    echo -e "${C_WARN}>>> 生成 PostgreSQL 加固配置 <<<${C_RST}"
+    echo -e "${C_WARN}>>> Generate PostgreSQL hardening config <<<${C_RST}"
     mkdir -p "$OUTPUT_DIR/postgresql"
     cat > "$OUTPUT_DIR/postgresql/hardened-postgresql.conf" <<'EOF'
 # PostgreSQL Hardened Configuration
@@ -554,11 +554,11 @@ EOF
 3. Generate SSL certificates if not present
 4. Test connection: `psql -U postgres -h localhost`
 EOF
-    echo -e "${C_OK}PostgreSQL 配置已生成到: $OUTPUT_DIR/postgresql/${C_RST}"
+    echo -e "${C_OK}PostgreSQL config generated to: $OUTPUT_DIR/postgresql/${C_RST}"
 }
 
 generate_redis_config() {
-    echo -e "${C_WARN}>>> 生成 Redis 加固配置 <<<${C_RST}"
+    echo -e "${C_WARN}>>> Generate Redis hardening config <<<${C_RST}"
     mkdir -p "$OUTPUT_DIR/redis"
     cat > "$OUTPUT_DIR/redis/hardened-redis.conf" <<'EOF'
 # Redis Hardened Configuration
@@ -639,11 +639,11 @@ EOF
    ```
 4. Test: `redis-cli -a yourpassword ping`
 EOF
-    echo -e "${C_OK}Redis 配置已生成到: $OUTPUT_DIR/redis/${C_RST}"
+    echo -e "${C_OK}Redis config generated to: $OUTPUT_DIR/redis/${C_RST}"
 }
 
 generate_mongodb_config() {
-    echo -e "${C_WARN}>>> 生成 MongoDB 加固配置 <<<${C_RST}"
+    echo -e "${C_WARN}>>> Generate MongoDB hardening config <<<${C_RST}"
     mkdir -p "$OUTPUT_DIR/mongodb"
     cat > "$OUTPUT_DIR/mongodb/hardened-mongod.conf" <<'EOF'
 # MongoDB Hardened Configuration
@@ -740,24 +740,24 @@ EOF
    ```
 4. Test: `mongosh "mongodb://admin:password@localhost:27017/admin?tls=true"`
 EOF
-    echo -e "${C_OK}MongoDB 配置已生成到: $OUTPUT_DIR/mongodb/${C_RST}"
+    echo -e "${C_OK}MongoDB config generated to: $OUTPUT_DIR/mongodb/${C_RST}"
 }
 
-# ── 审计模式 ─────────────────────────────────────────────────
+# ── Audit mode ─────────────────────────────────────────────────
 audit_all() {
-    echo -e "${C_WARN}>>> 数据库安全审计 <<<${C_RST}"
-    echo -e "${C_INFO}只读模式, 不修改任何数据库配置${C_RST}"
+    echo -e "${C_WARN}>>> Database security audit <<<${C_RST}"
+    echo -e "${C_INFO}Read-only mode, no database config modified${C_RST}"
     echo ""
 
     init_report
 
     if [ -z "$DETECTED_DBS" ]; then
-        echo -e "${C_WARN}未检测到任何数据库${C_RST}"
-        echo -e "${C_INFO}支持: MySQL, PostgreSQL, Redis, MongoDB${C_RST}"
+        echo -e "${C_WARN}No database detected${C_RST}"
+        echo -e "${C_INFO}Supported: MySQL, PostgreSQL, Redis, MongoDB${C_RST}"
         return 0
     fi
 
-    echo -e "${C_INFO}检测到: $DETECTED_DBS${C_RST}"
+    echo -e "${C_INFO}Detected: $DETECTED_DBS${C_RST}"
     echo ""
 
     for db in $DETECTED_DBS; do
@@ -769,10 +769,10 @@ audit_all() {
         esac
     done
 
-    # JSON 报告
+    # JSON report
     echo "${JSON_RESULTS}]" > "$REPORT_DIR/db-audit-${TIMESTAMP}.json"
 
-    # 摘要
+    # Summary
     echo ""
     echo -e "${C_INFO}╔══════════════════════════════════════════╗${C_RST}"
     echo -e "${C_INFO}║  Database Security Audit Summary          ║${C_RST}"
@@ -785,10 +785,10 @@ audit_all() {
     printf "  ${C_INFO}SKIP${C_RST}: %d\n" "$COUNT_SKIP"
     printf "  Total: %d\n" "$TOTAL_CHECKS"
     echo ""
-    echo -e "报告: $REPORT_FILE"
+    echo -e "Report: $REPORT_FILE"
 }
 
-# ── 交互式模式 ───────────────────────────────────────────────
+# ── Interactive mode ───────────────────────────────────────────────
 interactive_mode() {
     echo -e "${C_INFO}╔══════════════════════════════════════════╗${C_RST}"
     echo -e "${C_INFO}║  Database Hardening Wizard                ║${C_RST}"
@@ -798,34 +798,34 @@ interactive_mode() {
 
     detect_databases
     if [ -n "$DETECTED_DBS" ]; then
-        echo -e "${C_INFO}检测到: $DETECTED_DBS${C_RST}"
+        echo -e "${C_INFO}Detected: $DETECTED_DBS${C_RST}"
     else
-        echo -e "${C_WARN}未检测到已安装的数据库${C_RST}"
+        echo -e "${C_WARN}No installed database detected${C_RST}"
     fi
     echo ""
 
-    echo -e "${C_INFO}选择操作:${C_RST}"
-    echo -e "  ${C_WARN}1.${C_RST} 审计所有已检测数据库 (只读)"
-    echo -e "  ${C_WARN}2.${C_RST} 生成 MySQL 加固配置"
-    echo -e "  ${C_WARN}3.${C_RST} 生成 PostgreSQL 加固配置"
-    echo -e "  ${C_WARN}4.${C_RST} 生成 Redis 加固配置"
-    echo -e "  ${C_WARN}5.${C_RST} 生成 MongoDB 加固配置"
-    echo -e "  ${C_WARN}0.${C_RST} 退出"
+    echo -e "${C_INFO}Select action:${C_RST}"
+    echo -e "  ${C_WARN}1.${C_RST} Audit all detected databases (read-only)"
+    echo -e "  ${C_WARN}2.${C_RST} Generate MySQL hardening config"
+    echo -e "  ${C_WARN}3.${C_RST} Generate PostgreSQL hardening config"
+    echo -e "  ${C_WARN}4.${C_RST} Generate Redis hardening config"
+    echo -e "  ${C_WARN}5.${C_RST} Generate MongoDB hardening config"
+    echo -e "  ${C_WARN}0.${C_RST} Exit"
     echo ""
     local pick
-    read -r -p "❯ 选择 [0-5]: " pick
+    read -r -p "Select [0-5]: " pick
     case $pick in
         1) audit_all ;;
         2) generate_mysql_config ;;
         3) generate_postgres_config ;;
         4) generate_redis_config ;;
         5) generate_mongodb_config ;;
-        0) echo "退出"; exit 0 ;;
-        *) echo -e "${C_FAIL}无效输入${C_RST}"; exit 1 ;;
+        0) echo "Exit"; exit 0 ;;
+        *) echo -e "${C_FAIL}Invalid input${C_RST}"; exit 1 ;;
     esac
 }
 
-# ── 主流程 ───────────────────────────────────────────────────
+# ── Main flow ───────────────────────────────────────────────────
 main() {
     parse_args "$@"
     detect_databases
@@ -850,7 +850,7 @@ main() {
             interactive_mode || true
             ;;
         *)
-            echo "未知模式: $MODE"; exit 1
+            echo "Unknown mode: $MODE"; exit 1
             ;;
     esac
     return 0

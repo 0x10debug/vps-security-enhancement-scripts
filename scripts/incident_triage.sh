@@ -1,28 +1,28 @@
 #!/bin/bash
 # ════════════════════════════════════════════════════════════
 #  incident_triage.sh — Incident Response & Forensic Triage Collector
-#  适用系统: Linux 主机
-#  运行身份: root
-#  模式: 只读取证采集 (不修改系统, 不杀进程, 不删文件)
-#  参考: NIST SP 800-61 (Incident Response)
+#  Supported OS: Linux host
+#  Run as: root
+#  Mode: Read-only forensic collection (does not modify system, does not kill processes, does not delete files)
+#  Reference: NIST SP 800-61 (Incident Response)
 #         SANS Forensic Triage
 #         order-of-volatility (RFC 3227)
-#  项目主页: https://github.com/0x10debug/vps-security-enhancement-scripts
+#  Project home: https://github.com/0x10debug/vps-security-enhancement-scripts
 # ════════════════════════════════════════════════════════════
 #
-# 用法:
-#   sudo ./scripts/incident_triage.sh                    # 交互式向导
-#   sudo ./scripts/incident_triage.sh collect            # 完整取证采集 (全量)
-#   sudo ./scripts/incident_triage.sh quick              # 快速概览 (~30s)
-#   sudo ./scripts/incident_triage.sh analyze <archive>  # 分析已采集数据
-#   sudo ./scripts/incident_triage.sh report <archive>   # 生成摘要报告
-#   sudo ./scripts/incident_triage.sh audit              # 只读审计 (15+ 检查项)
+# Usage:
+#   sudo ./scripts/incident_triage.sh                    # Interactive wizard
+#   sudo ./scripts/incident_triage.sh collect            # Full forensic collection (complete)
+#   sudo ./scripts/incident_triage.sh quick              # Quick overview (~30s)
+#   sudo ./scripts/incident_triage.sh analyze <archive>  # Analyze collected data
+#   sudo ./scripts/incident_triage.sh report <archive>   # Generate summary report
+#   sudo ./scripts/incident_triage.sh audit              # Read-only audit (15+ checks)
 #   sudo ./scripts/incident_triage.sh --output ./triage-out
 #
-# 退出码:
-#   0 — 成功
-#   1 — 参数错误 / 依赖缺失
-#   2 — 部分功能不可用
+# Exit codes:
+#   0 — Success
+#   1 — Parameter error / missing dependency
+#   2 — Some features unavailable
 
 set -euo pipefail
 
@@ -47,7 +47,7 @@ C_WARN='\033[0;33m'
 C_INFO='\033[0;34m'
 C_RST='\033[0m'
 
-# ── 参数解析 ─────────────────────────────────────────────────
+# ── Parameter parsing ─────────────────────────────────────────────────
 parse_args() {
     while [ $# -gt 0 ]; do
         case "$1" in
@@ -58,7 +58,7 @@ parse_args() {
             audit) MODE="audit"; shift ;;
             --output) OUTPUT_DIR="$2"; shift 2 ;;
             -h|--help) sed -n '2,30p' "$0"; exit 0 ;;
-            *) echo "未知参数: $1"; exit 1 ;;
+            *) echo "Unknown parameter: $1"; exit 1 ;;
         esac
     done
     if [ -z "$MODE" ]; then
@@ -66,7 +66,7 @@ parse_args() {
     fi
 }
 
-# ── 报告初始化 ───────────────────────────────────────────────
+# ── Report initialization ───────────────────────────────────────────────
 init_report() {
     mkdir -p "$REPORT_DIR" 2>/dev/null || REPORT_DIR="/tmp/incident-triage"
     mkdir -p "$REPORT_DIR" 2>/dev/null || true
@@ -82,7 +82,7 @@ init_report() {
     } > "$REPORT_FILE"
 }
 
-# ── 检查函数 ─────────────────────────────────────────────────
+# ── Check functions ─────────────────────────────────────────────────
 run_check() {
     local id="$1" desc="$2"
     shift 2
@@ -120,10 +120,10 @@ run_check() {
     } >> "$REPORT_FILE"
 }
 
-# ── 工具函数 ─────────────────────────────────────────────────
+# ── Utility functions ─────────────────────────────────────────────────
 check_root() {
     if [ "$(id -u)" -ne 0 ]; then
-        echo -e "${C_FAIL}请以 root 身份运行 (取证采集需要读取系统日志/进程内存映射)${C_RST}"
+        echo -e "${C_FAIL}Please run as root (forensic collection requires reading system logs/process memory maps)${C_RST}"
         exit 1
     fi
 }
@@ -135,19 +135,19 @@ check_cmd() {
 print_summary() {
     echo ""
     echo -e "${C_OK}══════════════════════════════${C_RST}"
-    echo -e "${C_OK}  审计总结${C_RST}"
+    echo -e "${C_OK}  Audit summary${C_RST}"
     echo -e "${C_OK}══════════════════════════════${C_RST}"
     printf "  ${C_OK}PASS${C_RST}: %d  ${C_FAIL}FAIL${C_RST}: %d  ${C_WARN}WARN${C_RST}: %d  ${C_INFO}SKIP${C_RST}: %d  Total: %d\n" \
         "$COUNT_PASS" "$COUNT_FAIL" "$COUNT_WARN" "$COUNT_SKIP" "$TOTAL_CHECKS"
-    echo -e "  报告: ${C_INFO}${REPORT_FILE}${C_RST}"
+    echo -e "  Report: ${C_INFO}${REPORT_FILE}${C_RST}"
 }
 
 wait_key() {
     echo ""
-    read -r -p "按回车继续..." _
+    read -r -p "Press Enter to continue..." _
 }
 
-# ── 采集工作目录 ─────────────────────────────────────────────
+# ── Collection work directory ─────────────────────────────────────────────
 setup_workdir() {
     local base="$1"
     local workdir="${base}/incident-${TIMESTAMP}"
@@ -155,8 +155,8 @@ setup_workdir() {
     echo "$workdir"
 }
 
-# 采集单个文件: save_cmd <outfile> <command...>
-# 捕获命令输出到文件, 失败时写入错误占位符
+# Capture single file: save_cmd <outfile> <command...>
+# Capture command output to file, write error placeholder on failure
 save_cmd() {
     local outfile="$1"
     shift
@@ -169,7 +169,7 @@ save_cmd() {
     } > "$outfile"
 }
 
-# 采集文件内容: save_file <outfile> <source>
+# Capture file content: save_file <outfile> <source>
 save_file() {
     local outfile="$1"
     local src="$2"
@@ -185,7 +185,7 @@ save_file() {
     } > "$outfile"
 }
 
-# 采集文件尾部: save_tail <outfile> <source> <lines>
+# Capture file tail: save_tail <outfile> <source> <lines>
 save_tail() {
     local outfile="$1"
     local src="$2"
@@ -202,7 +202,7 @@ save_tail() {
     } > "$outfile"
 }
 
-# 列出 /proc 中的数字 PID (避免 ls | grep, 兼容 shellcheck)
+# List numeric PIDs in /proc (avoid ls | grep, shellcheck compatible)
 proc_numeric_pids() {
     local p
     for p in /proc/[0-9]*; do
@@ -211,10 +211,10 @@ proc_numeric_pids() {
     done
 }
 
-# ── 系统信息采集 ─────────────────────────────────────────────
+# ── System info collection ─────────────────────────────────────────────
 collect_system_info() {
     local d="$1"
-    echo -e "${C_INFO}── 系统信息 ──${C_RST}"
+    echo -e "${C_INFO}── System info ──${C_RST}"
     save_cmd "$d/01-hostname.txt" hostname
     save_cmd "$d/01-hostnamectl.txt" hostnamectl
     save_cmd "$d/01-uptime.txt" uptime
@@ -229,18 +229,18 @@ collect_system_info() {
     save_cmd "$d/01-dmesg-tail.txt" dmesg 2>/dev/null || true
 }
 
-# ── 进程分析 ─────────────────────────────────────────────────
+# ── Process analysis ─────────────────────────────────────────────────
 collect_processes() {
     local d="$1"
-    echo -e "${C_INFO}── 进程分析 ──${C_RST}"
+    echo -e "${C_INFO}── Process analysis ──${C_RST}"
     save_cmd "$d/02-ps-aux.txt" ps auxww
     save_cmd "$d/02-ps-ef.txt" ps -ef
     save_cmd "$d/02-ps-tree.txt" ps -eo pid,ppid,user,cmd --forest
     save_cmd "$d/02-top.txt" top -b -n 1
-    # 可疑进程: CPU/内存占用前 20
+    # Suspicious processes: top 20 by CPU/memory
     save_cmd "$d/02-ps-cpu-top.txt" ps aux --sort=-%cpu | head -20
     save_cmd "$d/02-ps-mem-top.txt" ps aux --sort=-%mem | head -20
-    # 隐藏进程检测: /proc 中存在但 ps 不显示
+    # Hidden process detection: exists in /proc but not shown by ps
     {
         echo "# Hidden process detection (proc vs ps)"
         echo "# Timestamp: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
@@ -256,7 +256,7 @@ collect_processes() {
             echo "[OK] no hidden PIDs detected"
         fi
     } > "$d/02-hidden-pids.txt"
-    # 进程内存映射 (不导出完整内存, 太大)
+    # Process memory maps (do not export full memory, too large)
     {
         echo "# Process memory maps (top 10 by CPU)"
         echo "# Timestamp: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
@@ -269,7 +269,7 @@ collect_processes() {
             echo ""
         done
     } > "$d/02-memory-maps.txt"
-    # 进程可执行文件路径与已删除可执行
+    # Process executable paths and deleted executables
     {
         echo "# Process exe paths (deleted exe = suspicious)"
         echo "# Timestamp: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
@@ -285,10 +285,10 @@ collect_processes() {
     } > "$d/02-exe-paths.txt"
 }
 
-# ── 网络分析 ─────────────────────────────────────────────────
+# ── Network analysis ─────────────────────────────────────────────────
 collect_network() {
     local d="$1"
-    echo -e "${C_INFO}── 网络分析 ──${C_RST}"
+    echo -e "${C_INFO}── Network analysis ──${C_RST}"
     if check_cmd ss; then
         save_cmd "$d/03-ss-all.txt" ss -tulnpa
         save_cmd "$d/03-ss-listen.txt" ss -tlnp
@@ -305,7 +305,7 @@ collect_network() {
     save_cmd "$d/03-ufw.txt" ufw status verbose 2>/dev/null || true
     save_cmd "$d/03-firewalld.txt" firewall-cmd --list-all 2>/dev/null || true
     save_cmd "$d/03-conntrack.txt" conntrack -L 2>/dev/null || true
-    # 已建立的外连 (非本地/非监听)
+    # Established outbound connections (non-local/non-listening)
     {
         echo "# Established outbound connections"
         echo "# Timestamp: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
@@ -318,10 +318,10 @@ collect_network() {
     } > "$d/03-established.txt"
 }
 
-# ── 持久化机制 ───────────────────────────────────────────────
+# ── Persistence mechanisms ───────────────────────────────────────────────
 collect_persistence() {
     local d="$1"
-    echo -e "${C_INFO}── 持久化机制 ──${C_RST}"
+    echo -e "${C_INFO}── Persistence mechanisms ──${C_RST}"
     # cron
     save_cmd "$d/04-crontab-root.txt" crontab -l 2>/dev/null || echo "[SKIP] no root crontab"
     save_cmd "$d/04-crontab-etc.txt" cat /etc/crontab
@@ -351,7 +351,7 @@ collect_persistence() {
     save_cmd "$d/04-systemd-services.txt" systemctl list-units --type=service --all
     save_cmd "$d/04-systemd-timers.txt" systemctl list-timers --all
     save_cmd "$d/04-systemd-enabled.txt" systemctl list-unit-files --state=enabled
-    # 启动脚本
+    # Startup scripts
     save_cmd "$d/04-rc-local.txt" cat /etc/rc.local 2>/dev/null || echo "[SKIP] no rc.local"
     {
         echo "# /etc/init.d/ listing"
@@ -381,7 +381,7 @@ collect_persistence() {
             fi
         done
     } > "$d/04-authorized-keys.txt"
-    # bashrc / profile 修改
+    # bashrc / profile modifications
     save_file "$d/04-root-bashrc.txt" /root/.bashrc
     save_file "$d/04-root-profile.txt" /root/.profile
     {
@@ -399,10 +399,10 @@ collect_persistence() {
     save_file "$d/04-ld-so-preload.txt" /etc/ld.so.preload
 }
 
-# ── 日志分析 ─────────────────────────────────────────────────
+# ── Log analysis ─────────────────────────────────────────────────
 collect_logs() {
     local d="$1"
-    echo -e "${C_INFO}── 日志分析 ──${C_RST}"
+    echo -e "${C_INFO}── Log analysis ──${C_RST}"
     local lines=500
     # auth log
     save_tail "$d/05-auth-log.txt" /var/log/auth.log "$lines"
@@ -424,7 +424,7 @@ collect_logs() {
     save_tail "$d/05-apache-error.txt" /var/log/apache2/error.log "$lines"
     save_tail "$d/05-httpd-access.txt" /var/log/httpd/access_log "$lines"
     save_tail "$d/05-httpd-error.txt" /var/log/httpd/error_log "$lines"
-    # 可疑条目: failed sudo / failed ssh / root login
+    # Suspicious entries: failed sudo / failed ssh / root login
     {
         echo "# Suspicious log entries (failed sudo/ssh, root login)"
         echo "# Timestamp: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
@@ -437,11 +437,11 @@ collect_logs() {
     } > "$d/05-suspicious.txt"
 }
 
-# ── 文件系统 ─────────────────────────────────────────────────
+# ── Filesystem ─────────────────────────────────────────────────
 collect_filesystem() {
     local d="$1"
-    echo -e "${C_INFO}── 文件系统 ──${C_RST}"
-    # 最近修改文件 (最近 24h, 排除 /proc /sys /dev /run)
+    echo -e "${C_INFO}── Filesystem ──${C_RST}"
+    # Recently modified files (last 24h, excluding /proc /sys /dev /run)
     {
         echo "# Files modified in last 24h (excluding pseudo-fs)"
         echo "# Timestamp: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
@@ -454,13 +454,13 @@ collect_filesystem() {
         echo "---"
         find / -xdev \( -perm -4000 -o -perm -2000 \) -type f 2>/dev/null | head -200 || true
     } > "$d/06-suid-sgid.txt"
-    # world-writable (排除 /tmp /var/tmp)
+    # world-writable (excluding /tmp /var/tmp)
     {
         echo "# World-writable files (excluding /tmp /var/tmp)"
         echo "---"
         find / -xdev -type f -perm -0002 ! -path "/tmp/*" ! -path "/var/tmp/*" 2>/dev/null | head -200 || true
     } > "$d/06-world-writable.txt"
-    # /tmp 可疑文件
+    # Suspicious files in /tmp
     {
         echo "# /tmp and /var/tmp contents"
         echo "---"
@@ -470,22 +470,22 @@ collect_filesystem() {
         echo "--- /var/tmp ---"
         ls -la /var/tmp/ 2>/dev/null || true
     } > "$d/06-tmp-contents.txt"
-    # 可疑隐藏文件
+    # Suspicious hidden files
     {
         echo "# Hidden files in common dirs"
         echo "---"
         find /root /home /tmp /var/tmp /dev/shm -name ".*" -type f 2>/dev/null | head -100 || true
     } > "$d/06-hidden-files.txt"
-    # 挂载点
+    # Mount points
     save_cmd "$d/06-mount.txt" mount
     save_cmd "$d/06-df.txt" df -h
     save_cmd "$d/06-fstab.txt" cat /etc/fstab
 }
 
-# ── 用户账户 ─────────────────────────────────────────────────
+# ── User accounts ─────────────────────────────────────────────────
 collect_users() {
     local d="$1"
-    echo -e "${C_INFO}── 用户账户 ──${C_RST}"
+    echo -e "${C_INFO}── User accounts ──${C_RST}"
     save_cmd "$d/07-passwd.txt" cat /etc/passwd
     save_cmd "$d/07-shadow.txt" cat /etc/shadow
     save_cmd "$d/07-group.txt" cat /etc/group
@@ -514,7 +514,7 @@ collect_users() {
     save_cmd "$d/07-lastb.txt" lastb -50
 }
 
-# ── 证据链 / 清单 ────────────────────────────────────────────
+# ── Evidence chain / manifest ────────────────────────────────────────────
 build_manifest() {
     local workdir="$1"
     local manifest="$workdir/manifest.json"
@@ -544,7 +544,7 @@ build_manifest() {
         echo "  ]"
         echo "}"
     } > "$manifest"
-    # 单独的 sha256 清单
+    # Standalone sha256 manifest
     {
         echo "# SHA-256 checksums for all artifacts"
         echo "# Generated: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
@@ -558,7 +558,7 @@ build_manifest() {
     echo "$manifest"
 }
 
-# ── 打包归档 ─────────────────────────────────────────────────
+# ── Package archive ─────────────────────────────────────────────────
 build_archive() {
     local workdir="$1"
     local base="$2"
@@ -566,20 +566,20 @@ build_archive() {
     tar -czf "$archive" -C "$base" "$(basename "$workdir")" 2>/dev/null
     local arc_hash
     arc_hash=$(sha256sum "$archive" 2>/dev/null | awk '{print $1}')
-    echo -e "${C_OK}归档: ${C_INFO}$archive${C_RST}"
+    echo -e "${C_OK}Archive: ${C_INFO}$archive${C_RST}"
     echo -e "${C_OK}SHA-256: ${C_INFO}$arc_hash${C_RST}"
     echo "$archive"
 }
 
-# ── 完整采集 ─────────────────────────────────────────────────
+# ── Full collection ─────────────────────────────────────────────────
 do_collect() {
-    echo -e "${C_WARN}>>> 完整取证采集 (只读, 不修改系统) <<<${C_RST}"
-    echo -e "${C_INFO}输出目录: $OUTPUT_DIR${C_RST}"
+    echo -e "${C_WARN}>>> Full forensic collection (read-only, no system modification) <<<${C_RST}"
+    echo -e "${C_INFO}Output directory: $OUTPUT_DIR${C_RST}"
     echo ""
     mkdir -p "$OUTPUT_DIR"
     local workdir
     workdir=$(setup_workdir "$OUTPUT_DIR")
-    echo -e "${C_INFO}工作目录: $workdir${C_RST}"
+    echo -e "${C_INFO}Working directory: $workdir${C_RST}"
     echo ""
 
     collect_system_info "$workdir"
@@ -591,72 +591,72 @@ do_collect() {
     collect_users "$workdir"
 
     echo ""
-    echo -e "${C_INFO}── 构建证据链 ──${C_RST}"
+    echo -e "${C_INFO}── Build evidence chain ──${C_RST}"
     local manifest
     manifest=$(build_manifest "$workdir")
-    echo -e "${C_OK}清单: $manifest${C_RST}"
+    echo -e "${C_OK}Manifest: $manifest${C_RST}"
 
     echo ""
-    echo -e "${C_INFO}── 打包归档 ──${C_RST}"
+    echo -e "${C_INFO}── Package archive ──${C_RST}"
     local archive
     archive=$(build_archive "$workdir" "$OUTPUT_DIR")
 
     echo ""
     echo -e "${C_OK}══════════════════════════════${C_RST}"
-    echo -e "${C_OK}  采集完成${C_RST}"
+    echo -e "${C_OK}  Collection complete${C_RST}"
     echo -e "${C_OK}══════════════════════════════${C_RST}"
-    echo -e "  归档: ${C_INFO}$archive${C_RST}"
-    echo -e "  清单: ${C_INFO}$manifest${C_RST}"
-    echo -e "  校验: ${C_INFO}$OUTPUT_DIR/sha256sums.txt${C_RST}"
-    echo -e "${C_WARN}请将归档复制到离线/可信存储后再进行分析。${C_RST}"
+    echo -e "  Archive: ${C_INFO}$archive${C_RST}"
+    echo -e "  Manifest: ${C_INFO}$manifest${C_RST}"
+    echo -e "  Verify: ${C_INFO}$OUTPUT_DIR/sha256sums.txt${C_RST}"
+    echo -e "${C_WARN}Copy archive to offline/trusted storage before analysis。${C_RST}"
 }
 
-# ── 快速概览 ─────────────────────────────────────────────────
+# ── Quick overview ─────────────────────────────────────────────────
 do_quick() {
-    echo -e "${C_WARN}>>> 快速概览 (~30s, 只读) <<<${C_RST}"
+    echo -e "${C_WARN}>>> Quick overview (~30s, read-only) <<<${C_RST}"
     echo ""
-    echo -e "${C_INFO}── 系统 ──${C_RST}"
+    echo -e "${C_INFO}── System ──${C_RST}"
     echo "Host: $(hostname 2>/dev/null || echo 'N/A')"
     echo "Uptime: $(uptime 2>/dev/null || echo 'N/A')"
     echo "Kernel: $(uname -r 2>/dev/null)"
     echo "Date: $(date)"
     echo ""
-    echo -e "${C_INFO}── 当前登录 ──${C_RST}"
+    echo -e "${C_INFO}── Current logins ──${C_RST}"
     who 2>/dev/null || true
     echo ""
-    echo -e "${C_INFO}── 进程 TOP10 (CPU) ──${C_RST}"
+    echo -e "${C_INFO}── Top 10 processes (CPU) ──${C_RST}"
     ps aux --sort=-%cpu 2>/dev/null | head -11 || true
     echo ""
-    echo -e "${C_INFO}── 监听端口 ──${C_RST}"
+    echo -e "${C_INFO}── Listening ports ──${C_RST}"
     if check_cmd ss; then
         ss -tlnp 2>/dev/null || true
     else
         netstat -tlnp 2>/dev/null || true
     fi
     echo ""
-    echo -e "${C_INFO}── 已建立连接 ──${C_RST}"
+    echo -e "${C_INFO}── Established connections ──${C_RST}"
     if check_cmd ss; then
         ss -tunpa state established 2>/dev/null || ss -tunpa 2>/dev/null || true
     else
         netstat -tunpa 2>/dev/null | grep ESTABLISHED || true
     fi
     echo ""
-    echo -e "${C_INFO}── UID 0 账户 ──${C_RST}"
+    echo -e "${C_INFO}── UID 0 accounts ──${C_RST}"
     awk -F: '$3 == 0 {print}' /etc/passwd 2>/dev/null || true
     echo ""
     echo -e "${C_INFO}── root crontab ──${C_RST}"
-    crontab -l 2>/dev/null || echo "[无 root crontab]"
+    crontab -l 2>/dev/null || echo "[No root crontab]"
     echo ""
-    echo -e "${C_INFO}── 最近登录 ──${C_RST}"
+    echo -e "${C_INFO}── Recent logins ──${C_RST}"
     last -10 2>/dev/null || true
     echo ""
-    echo -e "${C_INFO}── 最近 24h 修改文件 (前 30) ──${C_RST}"
+    echo -e "${C_INFO}── Recently modified files (last 24h, top 30) ──${C_RST}"
     find / -xdev -type f -mtime -1 2>/dev/null | head -30 || true
     echo ""
-    echo -e "${C_WARN}快速概览完成。完整采集请用: $0 collect${C_RST}"
+    echo -e "${C_WARN}Quick overview complete. For full collection use: $0 collect${C_RST}"
 }
 
-# ── 只读审计 (15+ 检查项) ────────────────────────────────────
+# ── Read-only audit (15+ checks) ────────────────────────────────────
 chk_uid0() {
     local n
     n=$(awk -F: '$3 == 0 {print $1}' /etc/passwd 2>/dev/null | wc -l | tr -d ' ')
@@ -692,7 +692,7 @@ chk_world_writable_etc() {
 }
 
 chk_suid_unusual() {
-    # 常见合法 SUID 二进制
+    # Common legitimate SUID binaries
     local known="su sudo mount umount passwd chsh chfn newgrp gpasswd pkexec dbus-daemon-launch-helper polkit-agent-helper"
     local found=0
     while IFS= read -r f; do
@@ -867,62 +867,62 @@ chk_recent_modified_bin() {
 }
 
 do_audit() {
-    echo -e "${C_WARN}>>> 只读审计 (15+ 事件指标检查) <<<${C_RST}"
+    echo -e "${C_WARN}>>> Read-only audit (15+ event indicator checks) <<<${C_RST}"
     echo ""
     init_report
-    run_check "IR-01" "UID 0 账户仅 root" chk_uid0
-    run_check "IR-02" "root 密码非空" chk_empty_root_pw
-    run_check "IR-03" "/etc 无 world-writable 文件" chk_world_writable_etc
-    run_check "IR-04" "无非典型 SUID 二进制" chk_suid_unusual
-    run_check "IR-05" "/etc/ld.so.preload 为空" chk_ld_preload
-    run_check "IR-06" "无运行已删除二进制的进程" chk_deleted_exe
-    run_check "IR-07" "无隐藏 PID (rootkit 指标)" chk_hidden_pids
-    run_check "IR-08" "SSH authorized_keys 清单" chk_authorized_keys
-    run_check "IR-09" "cron 无可疑条目" chk_cron_suspicious
-    run_check "IR-10" "/tmp 无可执行文件" chk_tmp_exec
-    run_check "IR-11" "SSH 失败次数" chk_failed_ssh
-    run_check "IR-12" "近期 root 登录" chk_root_login_recent
-    run_check "IR-13" "非系统用户清单" chk_new_users
-    run_check "IR-14" "sudoers 无 NOPASSWD:ALL" chk_sudoers_unusual
-    run_check "IR-15" "已建立外连数量" chk_established_outbound
-    run_check "IR-16" "近 7 天修改的系统二进制" chk_recent_modified_bin
+    run_check "IR-01" "UID 0 accounts: only root" chk_uid0
+    run_check "IR-02" "Root password is not empty" chk_empty_root_pw
+    run_check "IR-03" "No world-writable files in /etc" chk_world_writable_etc
+    run_check "IR-04" "No atypical SUID binaries" chk_suid_unusual
+    run_check "IR-05" "/etc/ld.so.preload is empty" chk_ld_preload
+    run_check "IR-06" "No process running deleted binary" chk_deleted_exe
+    run_check "IR-07" "No hidden PIDs (rootkit indicator)" chk_hidden_pids
+    run_check "IR-08" "SSH authorized_keys manifest" chk_authorized_keys
+    run_check "IR-09" "No suspicious cron entries" chk_cron_suspicious
+    run_check "IR-10" "No executable files in /tmp" chk_tmp_exec
+    run_check "IR-11" "SSH failed attempts count" chk_failed_ssh
+    run_check "IR-12" "Recent root logins" chk_root_login_recent
+    run_check "IR-13" "Non-system user list" chk_new_users
+    run_check "IR-14" "No NOPASSWD:ALL in sudoers" chk_sudoers_unusual
+    run_check "IR-15" "Established outbound connections count" chk_established_outbound
+    run_check "IR-16" "System binaries modified in last 7 days" chk_recent_modified_bin
     print_summary
 }
 
-# ── 分析已采集数据 ───────────────────────────────────────────
+# ── Analyze collected data ───────────────────────────────────────────
 do_analyze() {
     if [ -z "$ARCHIVE_PATH" ]; then
-        echo -e "${C_FAIL}请指定归档路径: $0 analyze <archive.tar.gz>${C_RST}"
+        echo -e "${C_FAIL}Please specify archive path: $0 analyze <archive.tar.gz>${C_RST}"
         exit 1
     fi
     if [ ! -f "$ARCHIVE_PATH" ]; then
-        echo -e "${C_FAIL}归档不存在: $ARCHIVE_PATH${C_RST}"
+        echo -e "${C_FAIL}Archive does not exist: $ARCHIVE_PATH${C_RST}"
         exit 1
     fi
-    echo -e "${C_WARN}>>> 分析已采集数据: $ARCHIVE_PATH <<<${C_RST}"
+    echo -e "${C_WARN}>>> Analyze collected data: $ARCHIVE_PATH <<<${C_RST}"
     echo ""
-    # 验证归档完整性
-    echo -e "${C_INFO}── 归档校验 ──${C_RST}"
+    # Verify archive integrity
+    echo -e "${C_INFO}── Archive verification ──${C_RST}"
     local arc_hash
     arc_hash=$(sha256sum "$ARCHIVE_PATH" 2>/dev/null | awk '{print $1}')
     echo "SHA-256: $arc_hash"
     echo ""
-    # 解压到临时目录
+    # Extract to temp directory
     local tmpdir
     tmpdir=$(mktemp -d)
     tar -xzf "$ARCHIVE_PATH" -C "$tmpdir" 2>/dev/null || {
-        echo -e "${C_FAIL}解压失败${C_RST}"
+        echo -e "${C_FAIL}Extraction failed${C_RST}"
         rm -rf "$tmpdir"
         exit 1
     }
     local workdir
     workdir=$(find "$tmpdir" -maxdepth 1 -type d -name "incident-*" | head -1)
     [ -z "$workdir" ] && workdir="$tmpdir"
-    echo -e "${C_INFO}解压目录: $workdir${C_RST}"
+    echo -e "${C_INFO}Extracted directory: $workdir${C_RST}"
     echo ""
-    # 校验清单
+    # Verify manifest
     if [ -f "$workdir/manifest.json" ]; then
-        echo -e "${C_INFO}── 清单校验 ──${C_RST}"
+        echo -e "${C_INFO}── Manifest verification ──${C_RST}"
         local mismatches=0
         while IFS= read -r f; do
             local rel hash stored
@@ -935,59 +935,59 @@ do_analyze() {
             fi
         done < <(find "$workdir" -type f ! -name "manifest.json" ! -name "sha256sums.txt" 2>/dev/null)
         if [ "$mismatches" -eq 0 ]; then
-            echo -e "${C_OK}所有工件哈希匹配${C_RST}"
+            echo -e "${C_OK}All artifact hashes match${C_RST}"
         else
-            echo -e "${C_FAIL}$mismatches 个工件哈希不匹配${C_RST}"
+            echo -e "${C_FAIL}$mismatches artifact hashes mismatch${C_RST}"
         fi
     fi
     echo ""
-    # 高亮可疑项
-    echo -e "${C_INFO}── 可疑指标扫描 ──${C_RST}"
+    # Highlight suspicious items
+    echo -e "${C_INFO}── Suspicious indicator scan ──${C_RST}"
     local suspects=0
     if [ -f "$workdir/02-hidden-pids.txt" ] && grep -q WARN "$workdir/02-hidden-pids.txt" 2>/dev/null; then
-        echo -e "${C_FAIL}[!] 隐藏 PID 检测到${C_RST}"; suspects=$((suspects + 1))
+        echo -e "${C_FAIL}[!] Hidden PID detected${C_RST}"; suspects=$((suspects + 1))
     fi
     if [ -f "$workdir/02-exe-paths.txt" ] && grep -q SUSPECT "$workdir/02-exe-paths.txt" 2>/dev/null; then
-        echo -e "${C_FAIL}[!] 运行已删除二进制的进程${C_RST}"; suspects=$((suspects + 1))
+        echo -e "${C_FAIL}[!] Process running deleted binary${C_RST}"; suspects=$((suspects + 1))
     fi
     if [ -f "$workdir/04-ld-so-preload.txt" ] && ! grep -q '\[SKIP\]' "$workdir/04-ld-so-preload.txt" 2>/dev/null; then
         if [ -s "$workdir/04-ld-so-preload.txt" ]; then
-            echo -e "${C_FAIL}[!] /etc/ld.so.preload 非空 (rootkit 指标)${C_RST}"; suspects=$((suspects + 1))
+            echo -e "${C_FAIL}[!] /etc/ld.so.preload is non-empty (rootkit indicator)${C_RST}"; suspects=$((suspects + 1))
         fi
     fi
     if [ -f "$workdir/07-uid0.txt" ] && [ "$(wc -l < "$workdir/07-uid0.txt" | tr -d ' ')" -gt 1 ]; then
-        echo -e "${C_FAIL}[!] 多个 UID 0 账户${C_RST}"; suspects=$((suspects + 1))
+        echo -e "${C_FAIL}[!] Multiple UID 0 accounts${C_RST}"; suspects=$((suspects + 1))
     fi
     if [ -f "$workdir/05-suspicious.txt" ] && [ -s "$workdir/05-suspicious.txt" ]; then
-        echo -e "${C_WARN}[?] 日志中存在可疑条目 (见 05-suspicious.txt)${C_RST}"; suspects=$((suspects + 1))
+        echo -e "${C_WARN}[?] Suspicious entries found in logs (see 05-suspicious.txt)${C_RST}"; suspects=$((suspects + 1))
     fi
     if [ "$suspects" -eq 0 ]; then
-        echo -e "${C_OK}未发现明显可疑指标${C_RST}"
+        echo -e "${C_OK}No obvious suspicious indicators found${C_RST}"
     else
         echo ""
-        echo -e "${C_WARN}共 $suspects 项可疑指标, 请人工复核相关文件。${C_RST}"
+        echo -e "${C_WARN}Total $suspects suspicious indicators, please manually review related files。${C_RST}"
     fi
     echo ""
-    echo -e "${C_INFO}工件目录: $workdir${C_RST}"
-    echo -e "${C_WARN}分析完成后请清理临时目录: rm -rf $tmpdir${C_RST}"
+    echo -e "${C_INFO}Artifact directory: $workdir${C_RST}"
+    echo -e "${C_WARN}After analysis, please clean up temp directory: rm -rf $tmpdir${C_RST}"
 }
 
-# ── 生成摘要报告 ─────────────────────────────────────────────
+# ── Generate summary report ─────────────────────────────────────────────
 do_report() {
     if [ -z "$ARCHIVE_PATH" ]; then
-        echo -e "${C_FAIL}请指定归档路径: $0 report <archive.tar.gz>${C_RST}"
+        echo -e "${C_FAIL}Please specify archive path: $0 report <archive.tar.gz>${C_RST}"
         exit 1
     fi
     if [ ! -f "$ARCHIVE_PATH" ]; then
-        echo -e "${C_FAIL}归档不存在: $ARCHIVE_PATH${C_RST}"
+        echo -e "${C_FAIL}Archive does not exist: $ARCHIVE_PATH${C_RST}"
         exit 1
     fi
-    echo -e "${C_WARN}>>> 生成摘要报告: $ARCHIVE_PATH <<<${C_RST}"
+    echo -e "${C_WARN}>>> Generate summary report: $ARCHIVE_PATH <<<${C_RST}"
     echo ""
     local tmpdir
     tmpdir=$(mktemp -d)
     tar -xzf "$ARCHIVE_PATH" -C "$tmpdir" 2>/dev/null || {
-        echo -e "${C_FAIL}解压失败${C_RST}"
+        echo -e "${C_FAIL}Extraction failed${C_RST}"
         rm -rf "$tmpdir"
         exit 1
     }
@@ -1051,47 +1051,47 @@ do_report() {
         echo "4. If compromise confirmed: isolate, preserve evidence, then eradicate"
         echo "5. See handbook/21-incident-response-forensics.md for full procedure"
     } > "$report"
-    echo -e "${C_OK}报告: ${C_INFO}$report${C_RST}"
+    echo -e "${C_OK}Report: ${C_INFO}$report${C_RST}"
     echo ""
     cat "$report"
     rm -rf "$tmpdir"
 }
 
-# ── 交互式向导 ───────────────────────────────────────────────
+# ── Interactive wizard ───────────────────────────────────────────────
 interactive_wizard() {
     while true; do
         clear
         echo -e "${C_OK}═══════════════════${C_RST}"
-        echo -e "${C_OK}  应急取证采集      ${C_RST}"
+        echo -e "${C_OK}  Emergency forensic collection      ${C_RST}"
         echo -e "${C_OK}═══════════════════${C_RST}"
-        echo -e "  ${C_WARN}1.${C_RST} 📦 完整采集 (collect)"
-        echo -e "  ${C_WARN}2.${C_RST} ⚡ 快速概览 (quick)"
-        echo -e "  ${C_WARN}3.${C_RST} 🛡️ 只读审计 (audit, 15+ 检查)"
-        echo -e "  ${C_WARN}4.${C_RST} 🔍 分析归档 (analyze)"
-        echo -e "  ${C_WARN}5.${C_RST} 📋 生成报告 (report)"
-        echo -e "  ${C_WARN}0.${C_RST} 返回"
+        echo -e "  ${C_WARN}1.${C_RST} 📦 Full collection (collect)"
+        echo -e "  ${C_WARN}2.${C_RST} ⚡ Quick overview (quick)"
+        echo -e "  ${C_WARN}3.${C_RST} 🛡️ Read-only audit (audit, 15+ checks)"
+        echo -e "  ${C_WARN}4.${C_RST} 🔍 Analyze archive (analyze)"
+        echo -e "  ${C_WARN}5.${C_RST} 📋 Generate report (report)"
+        echo -e "  ${C_WARN}0.${C_RST} Back"
         echo
         local pick
-        read -r -p "❯ 选择 [0-5]: " pick
+        read -r -p "Select [0-5]: " pick
         case $pick in
             1) do_collect; wait_key ;;
             2) do_quick; wait_key ;;
             3) do_audit; wait_key ;;
             4)
-                read -r -p "归档路径: " ARCHIVE_PATH
+                read -r -p "Archive path: " ARCHIVE_PATH
                 do_analyze; wait_key
                 ;;
             5)
-                read -r -p "归档路径: " ARCHIVE_PATH
+                read -r -p "Archive path: " ARCHIVE_PATH
                 do_report; wait_key
                 ;;
             0) break ;;
-            *) echo -e "${C_FAIL}无效输入${C_RST}"; sleep 1 ;;
+            *) echo -e "${C_FAIL}Invalid input${C_RST}"; sleep 1 ;;
         esac
     done
 }
 
-# ── 主流程 ───────────────────────────────────────────────────
+# ── Main flow ───────────────────────────────────────────────────
 main() {
     parse_args "$@"
     case "$MODE" in
@@ -1101,7 +1101,7 @@ main() {
         analyze) do_analyze ;;
         report) do_report ;;
         interactive) check_root; interactive_wizard ;;
-        *) echo "未知模式: $MODE"; exit 1 ;;
+        *) echo "Unknown mode: $MODE"; exit 1 ;;
     esac
 }
 

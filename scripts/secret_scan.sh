@@ -1,30 +1,30 @@
 #!/bin/bash
 # ════════════════════════════════════════════════════════════
 #  secret_scan.sh — Secret & Key Scanning (gitleaks + trufflehog)
-#  适用系统: Linux 主机
-#  运行身份: root 或普通用户
-#  模式: 扫描 + 审计 + CI 集成配置生成 (只读扫描, 不修改文件)
-#  参考: gitleaks/gitleaks
+#  Supported OS: Linux host
+#  Run as: root or regular user
+#  Mode: Scan + audit + CI integration config generation (read-only scan, no files modified)
+#  Reference: gitleaks/gitleaks
 #         trufflesecurity/trufflehog
-#  项目主页: https://github.com/0x10debug/vps-security-enhancement-scripts
+#  Project home: https://github.com/0x10debug/vps-security-enhancement-scripts
 # ════════════════════════════════════════════════════════════
 #
-# 用法:
-#   sudo ./scripts/secret_scan.sh                     # 交互式向导
-#   sudo ./scripts/secret_scan.sh --scan              # 快速扫描当前目录
-#   sudo ./scripts/secret_scan.sh --scan-git          # 扫描 git 历史
-#   sudo ./scripts/secret_scan.sh --deep              # 深度扫描 (trufflehog 验证)
-#   sudo ./scripts/secret_scan.sh --install           # 安装 gitleaks + trufflehog
-#   sudo ./scripts/secret_scan.sh --audit             # 只读审计密钥管理配置
-#   sudo ./scripts/secret_scan.sh --ci                # 生成 CI/pre-commit 配置
+# Usage:
+#   sudo ./scripts/secret_scan.sh                     # Interactive wizard
+#   sudo ./scripts/secret_scan.sh --scan              # Quick scan current directory
+#   sudo ./scripts/secret_scan.sh --scan-git          # Scan git history
+#   sudo ./scripts/secret_scan.sh --deep              # Deep scan (trufflehog verification)
+#   sudo ./scripts/secret_scan.sh --install           # Install gitleaks + trufflehog
+#   sudo ./scripts/secret_scan.sh --audit             # Read-only audit key management config
+#   sudo ./scripts/secret_scan.sh --ci                # Generate CI/pre-commit config
 #   sudo ./scripts/secret_scan.sh --path /path/to/scan
 #   sudo ./scripts/secret_scan.sh --output ./secret-scan-results
 #
-# 退出码:
-#   0 — 成功 (无密钥泄露或仅审计)
-#   1 — 参数错误 / 依赖缺失
-#   2 — 发现潜在密钥泄露
-#   3 — 部分功能不可用
+# Exit codes:
+#   0 — Success (no key leaks or audit only)
+#   1 — Parameter error / missing dependency
+#   2 — Potential key leaks found
+#   3 — Some features unavailable
 
 set -euo pipefail
 
@@ -52,7 +52,7 @@ C_WARN='\033[0;33m'
 C_INFO='\033[0;34m'
 C_RST='\033[0m'
 
-# ── 参数解析 ─────────────────────────────────────────────────
+# ── Parameter parsing ─────────────────────────────────────────────────
 parse_args() {
     while [ $# -gt 0 ]; do
         case "$1" in
@@ -65,7 +65,7 @@ parse_args() {
             --path) SCAN_PATH="$2"; shift 2 ;;
             --output) OUTPUT_DIR="$2"; shift 2 ;;
             -h|--help) sed -n '2,28p' "$0"; exit 0 ;;
-            *) echo "未知参数: $1"; exit 1 ;;
+            *) echo "Unknown parameter: $1"; exit 1 ;;
         esac
     done
     if [ -z "$MODE" ]; then
@@ -79,7 +79,7 @@ parse_args() {
     fi
 }
 
-# ── 报告初始化 ───────────────────────────────────────────────
+# ── Report initialization ───────────────────────────────────────────────
 init_report() {
     mkdir -p "$REPORT_DIR" 2>/dev/null || REPORT_DIR="/tmp/secret-scan"
     mkdir -p "$REPORT_DIR" 2>/dev/null || true
@@ -95,7 +95,7 @@ init_report() {
     } > "$REPORT_FILE"
 }
 
-# ── 检查函数 ─────────────────────────────────────────────────
+# ── Check functions ─────────────────────────────────────────────────
 run_check() {
     local id="$1" desc="$2"
     shift 2
@@ -133,7 +133,7 @@ run_check() {
     } >> "$REPORT_FILE"
 }
 
-# ── 工具函数 ─────────────────────────────────────────────────
+# ── Utility functions ─────────────────────────────────────────────────
 check_cmd() {
     command -v "$1" >/dev/null 2>&1
 }
@@ -141,69 +141,69 @@ check_cmd() {
 print_summary() {
     echo ""
     echo -e "${C_OK}══════════════════════════════${C_RST}"
-    echo -e "${C_OK}  审计总结${C_RST}"
+    echo -e "${C_OK}  Audit summary${C_RST}"
     echo -e "${C_OK}══════════════════════════════${C_RST}"
     printf "  ${C_OK}PASS${C_RST}: %d  ${C_FAIL}FAIL${C_RST}: %d  ${C_WARN}WARN${C_RST}: %d  ${C_INFO}SKIP${C_RST}: %d  Total: %d\n" \
         "$COUNT_PASS" "$COUNT_FAIL" "$COUNT_WARN" "$COUNT_SKIP" "$TOTAL_CHECKS"
     if [ "$SECRETS_FOUND" -gt 0 ]; then
-        echo -e "  ${C_FAIL}发现 $SECRETS_FOUND 个潜在密钥泄露${C_RST}"
+        echo -e "  ${C_FAIL}Found $SECRETS_FOUND potential key leaks${C_RST}"
     fi
-    echo -e "  报告: ${C_INFO}${REPORT_FILE}${C_RST}"
+    echo -e "  Report: ${C_INFO}${REPORT_FILE}${C_RST}"
 }
 
 wait_key() {
     echo ""
-    read -r -p "按回车继续..." _
+    read -r -p "Press Enter to continue..." _
 }
 
-# ── 安装 gitleaks + trufflehog ────────────────────────────────
+# ── Install gitleaks + trufflehog ────────────────────────────────
 install_tools() {
-    echo -e "${C_WARN}>>> 安装密钥扫描工具 <<<${C_RST}"
+    echo -e "${C_WARN}>>> Install key scanning tools <<<${C_RST}"
 
     local arch
     arch=$(uname -m)
     case "$arch" in
         x86_64|amd64) arch="x64" ;;
         aarch64|arm64) arch="arm64" ;;
-        *) echo -e "${C_FAIL}不支持的架构: $arch${C_RST}"; return 1 ;;
+        *) echo -e "${C_FAIL}Unsupported architecture: $arch${C_RST}"; return 1 ;;
     esac
 
-    # 安装 gitleaks
+    # Install gitleaks
     if check_cmd gitleaks; then
-        echo -e "${C_INFO}gitleaks 已安装: $(gitleaks version 2>/dev/null || echo unknown)${C_RST}"
+        echo -e "${C_INFO}gitleaks Installed: $(gitleaks version 2>/dev/null || echo unknown)${C_RST}"
     else
-        echo -e "${C_INFO}[1/4] 安装 gitleaks v${GITLEAKS_VER}...${C_RST}"
+        echo -e "${C_INFO}[1/4] Install gitleaks v${GITLEAKS_VER}...${C_RST}"
         local gl_url="https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VER}/gitleaks_${GITLEAKS_VER}_linux_${arch}.tar.gz"
         curl -sL "$gl_url" -o /tmp/gitleaks.tar.gz || {
-            echo -e "${C_WARN}gitleaks 下载失败, 跳过${C_RST}"
+            echo -e "${C_WARN}gitleaks download failed, skipping${C_RST}"
         }
         if [ -f /tmp/gitleaks.tar.gz ]; then
             tar xzf /tmp/gitleaks.tar.gz -C /tmp/ gitleaks 2>/dev/null
             mv /tmp/gitleaks /usr/local/bin/ 2>/dev/null && chmod +x /usr/local/bin/gitleaks
             rm -f /tmp/gitleaks.tar.gz
-            echo -e "${C_OK}gitleaks 安装完成${C_RST}"
+            echo -e "${C_OK}gitleaks installed${C_RST}"
         fi
     fi
 
-    # 安装 trufflehog
+    # Install trufflehog
     if check_cmd trufflehog; then
-        echo -e "${C_INFO}trufflehog 已安装${C_RST}"
+        echo -e "${C_INFO}trufflehog Installed${C_RST}"
     else
-        echo -e "${C_INFO}[2/4] 安装 trufflehog v${TRUFFLEHOG_VER}...${C_RST}"
+        echo -e "${C_INFO}[2/4] Install trufflehog v${TRUFFLEHOG_VER}...${C_RST}"
         local th_url="https://github.com/trufflesecurity/trufflehog/releases/download/v${TRUFFLEHOG_VER}/trufflehog_${TRUFFLEHOG_VER}_linux_${arch}.tar.gz"
         curl -sL "$th_url" -o /tmp/trufflehog.tar.gz || {
-            echo -e "${C_WARN}trufflehog 下载失败, 跳过${C_RST}"
+            echo -e "${C_WARN}trufflehog download failed, skipping${C_RST}"
         }
         if [ -f /tmp/trufflehog.tar.gz ]; then
             tar xzf /tmp/trufflehog.tar.gz -C /tmp/ trufflehog 2>/dev/null
             mv /tmp/trufflehog /usr/local/bin/ 2>/dev/null && chmod +x /usr/local/bin/trufflehog
             rm -f /tmp/trufflehog.tar.gz
-            echo -e "${C_OK}trufflehog 安装完成${C_RST}"
+            echo -e "${C_OK}trufflehog installed${C_RST}"
         fi
     fi
 
-    # 生成 .gitleaksignore 模板
-    echo -e "${C_INFO}[3/4] 生成 .gitleaksignore 模板...${C_RST}"
+    # Generate .gitleaksignore template
+    echo -e "${C_INFO}[3/4] Generate .gitleaksignore template...${C_RST}"
     mkdir -p "$OUTPUT_DIR"
     cat > "$OUTPUT_DIR/.gitleaksignore" <<'EOF'
 # gitleaks ignore file — known false positives
@@ -213,8 +213,8 @@ install_tools() {
 # a1b2c3d4e5f6:path/to/file:line
 EOF
 
-    # 生成 gitleaks 自定义配置
-    echo -e "${C_INFO}[4/4] 生成 gitleaks 自定义配置...${C_RST}"
+    # Generate gitleaks custom config
+    echo -e "${C_INFO}[4/4] Generate gitleaks custom config...${C_RST}"
     cat > "$OUTPUT_DIR/gitleaks-config.toml" <<'EOF'
 # gitleaks custom configuration
 # Extends default rules with project-specific patterns
@@ -248,37 +248,37 @@ paths = [
 EOF
 
     echo ""
-    echo -e "${C_OK}安装完成${C_RST}"
-    echo -e "${C_INFO}gitleaks: $(command -v gitleaks 2>/dev/null || echo '未安装')${C_RST}"
-    echo -e "${C_INFO}trufflehog: $(command -v trufflehog 2>/dev/null || echo '未安装')${C_RST}"
-    echo -e "${C_INFO}配置模板: $OUTPUT_DIR/gitleaks-config.toml${C_RST}"
-    echo -e "${C_INFO}忽略文件: $OUTPUT_DIR/.gitleaksignore${C_RST}"
+    echo -e "${C_OK}Installation complete${C_RST}"
+    echo -e "${C_INFO}gitleaks: $(command -v gitleaks 2>/dev/null || echo 'Not installed')${C_RST}"
+    echo -e "${C_INFO}trufflehog: $(command -v trufflehog 2>/dev/null || echo 'Not installed')${C_RST}"
+    echo -e "${C_INFO}Config template: $OUTPUT_DIR/gitleaks-config.toml${C_RST}"
+    echo -e "${C_INFO}Ignore file: $OUTPUT_DIR/.gitleaksignore${C_RST}"
 }
 
-# ── 快速扫描 (gitleaks) ───────────────────────────────────────
+# ── Quick scan (gitleaks) ───────────────────────────────────────
 scan_secrets() {
-    echo -e "${C_WARN}>>> 快速密钥扫描 (gitleaks) <<<${C_RST}"
+    echo -e "${C_WARN}>>> Quick key scan (gitleaks) <<<${C_RST}"
 
     if ! check_cmd gitleaks; then
-        echo -e "${C_FAIL}gitleaks 未安装, 请先运行 --install${C_RST}"
+        echo -e "${C_FAIL}gitleaks not installed, please run first --install${C_RST}"
         return 1
     fi
 
     if [ ! -d "$SCAN_PATH" ]; then
-        echo -e "${C_FAIL}路径不存在: $SCAN_PATH${C_RST}"
+        echo -e "${C_FAIL}Path does not exist: $SCAN_PATH${C_RST}"
         return 1
     fi
 
     mkdir -p "$OUTPUT_DIR"
 
-    echo -e "${C_INFO}扫描路径: $SCAN_PATH${C_RST}"
-    echo -e "${C_INFO}输出目录: $OUTPUT_DIR${C_RST}"
+    echo -e "${C_INFO}Scan path: $SCAN_PATH${C_RST}"
+    echo -e "${C_INFO}Output directory: $OUTPUT_DIR${C_RST}"
     echo ""
 
     local config_arg=""
     [ -f "$OUTPUT_DIR/gitleaks-config.toml" ] && config_arg="--config $OUTPUT_DIR/gitleaks-config.toml"
 
-    echo -e "${C_INFO}[1/2] 扫描工作区文件...${C_RST}"
+    echo -e "${C_INFO}[1/2] Scan workspace files...${C_RST}"
     # shellcheck disable=SC2086
     gitleaks detect --source "$SCAN_PATH" $config_arg \
         --report-format json \
@@ -300,10 +300,10 @@ except:
 
     if [ "$findings" -gt 0 ]; then
         echo ""
-        echo -e "${C_FAIL}发现 $findings 个潜在密钥泄露!${C_RST}"
-        echo -e "${C_INFO}详细报告: $OUTPUT_DIR/gitleaks-report.json${C_RST}"
+        echo -e "${C_FAIL}Found $findings potential key leaks!${C_RST}"
+        echo -e "${C_INFO}Detailed report: $OUTPUT_DIR/gitleaks-report.json${C_RST}"
         echo ""
-        echo -e "${C_WARN}泄露摘要:${C_RST}"
+        echo -e "${C_WARN}Leak summary:${C_RST}"
         python3 -c "
 import json
 with open('$OUTPUT_DIR/gitleaks-report.json') as f:
@@ -321,13 +321,13 @@ for item in data[:20]:
     print(f'  [{rule}] {file}:{line} -> {masked}')
 if len(data) > 20:
     print(f'  ... and {len(data) - 20} more')
-" 2>/dev/null || echo "  (解析报告失败, 请查看 JSON 文件)"
+" 2>/dev/null || echo "  (Failed to parse report, please check JSON file)"
     else
-        echo -e "${C_OK}未发现密钥泄露${C_RST}"
+        echo -e "${C_OK}No key leaks found${C_RST}"
     fi
 
     echo ""
-    echo -e "${C_INFO}[2/2] 生成人类可读报告...${C_RST}"
+    echo -e "${C_INFO}[2/2] Generate human-readable report...${C_RST}"
     {
         echo "Gitleaks Scan Report"
         echo "===================="
@@ -352,27 +352,27 @@ for item in data:
         fi
     } > "$OUTPUT_DIR/gitleaks-report.txt"
 
-    echo -e "${C_INFO}文本报告: $OUTPUT_DIR/gitleaks-report.txt${C_RST}"
+    echo -e "${C_INFO}Text report: $OUTPUT_DIR/gitleaks-report.txt${C_RST}"
 }
 
-# ── Git 历史扫描 ──────────────────────────────────────────────
+# ── Git history scan ──────────────────────────────────────────────
 scan_git_history() {
-    echo -e "${C_WARN}>>> Git 历史密钥扫描 (gitleaks) <<<${C_RST}"
+    echo -e "${C_WARN}>>> Git history key scan (gitleaks) <<<${C_RST}"
 
     if ! check_cmd gitleaks; then
-        echo -e "${C_FAIL}gitleaks 未安装, 请先运行 --install${C_RST}"
+        echo -e "${C_FAIL}gitleaks not installed, please run first --install${C_RST}"
         return 1
     fi
 
     if [ ! -d "$SCAN_PATH/.git" ]; then
-        echo -e "${C_FAIL}$SCAN_PATH 不是 git 仓库${C_RST}"
+        echo -e "${C_FAIL}$SCAN_PATH is not a git repository${C_RST}"
         return 1
     fi
 
     mkdir -p "$OUTPUT_DIR"
 
-    echo -e "${C_INFO}扫描 git 历史中的所有 commit...${C_RST}"
-    echo -e "${C_WARN}这可能需要较长时间, 取决于仓库大小${C_RST}"
+    echo -e "${C_INFO}Scanning all commits in git history...${C_RST}"
+    echo -e "${C_WARN}This may take a long time, depending on repository size${C_RST}"
     echo ""
 
     local config_arg=""
@@ -400,41 +400,41 @@ except:
 
     if [ "$findings" -gt 0 ]; then
         echo ""
-        echo -e "${C_FAIL}在 git 历史中发现 $findings 个潜在密钥泄露!${C_RST}"
-        echo -e "${C_WARN}这些密钥可能已泄露, 即使在后续 commit 中删除${C_RST}"
-        echo -e "${C_INFO}详细报告: $OUTPUT_DIR/gitleaks-git-report.json${C_RST}"
+        echo -e "${C_FAIL}Found $findings potential key leaks in git history!${C_RST}"
+        echo -e "${C_WARN}These keys may have leaked, even if removed in subsequent commits${C_RST}"
+        echo -e "${C_INFO}Detailed report: $OUTPUT_DIR/gitleaks-git-report.json${C_RST}"
         echo ""
-        echo -e "${C_WARN}修复建议:${C_RST}"
-        echo "  1. 立即轮换所有泄露的密钥/令牌"
-        echo "  2. 使用 git filter-repo 或 BFG 清理 git 历史"
-        echo "  3. 通知所有有仓库访问权限的人"
-        echo "  4. 更新 CI/CD 中的密钥"
+        echo -e "${C_WARN}Remediation suggestions:${C_RST}"
+        echo "  1. Immediately rotate all leaked keys/tokens"
+        echo "  2. Use git filter-repo or BFG to clean git history"
+        echo "  3. Notify everyone with repository access"
+        echo "  4. Update keys in CI/CD"
     else
-        echo -e "${C_OK}git 历史中未发现密钥泄露${C_RST}"
+        echo -e "${C_OK}No key leaks found in git history${C_RST}"
     fi
 }
 
-# ── 深度扫描 (trufflehog 验证) ────────────────────────────────
+# ── Deep scan (trufflehog verification) ────────────────────────────────
 scan_deep() {
-    echo -e "${C_WARN}>>> 深度密钥扫描 (trufflehog 验证) <<<${C_RST}"
+    echo -e "${C_WARN}>>> Deep key scan (trufflehog verification) <<<${C_RST}"
 
     if ! check_cmd trufflehog; then
-        echo -e "${C_FAIL}trufflehog 未安装, 请先运行 --install${C_RST}"
+        echo -e "${C_FAIL}trufflehog not installed, please run first --install${C_RST}"
         return 1
     fi
 
     if [ ! -d "$SCAN_PATH" ]; then
-        echo -e "${C_FAIL}路径不存在: $SCAN_PATH${C_RST}"
+        echo -e "${C_FAIL}Path does not exist: $SCAN_PATH${C_RST}"
         return 1
     fi
 
     mkdir -p "$OUTPUT_DIR"
 
-    echo -e "${C_INFO}trufflehog 会验证发现的密钥是否仍然有效${C_RST}"
-    echo -e "${C_WARN}注意: 验证过程会向密钥对应的 API 发送请求${C_RST}"
+    echo -e "${C_INFO}trufflehog will verify if discovered keys are still valid${C_RST}"
+    echo -e "${C_WARN}Note: Verification process sends requests to key APIs${C_RST}"
     echo ""
 
-    echo -e "${C_INFO}扫描文件系统...${C_RST}"
+    echo -e "${C_INFO}Scanning filesystem...${C_RST}"
     trufflehog filesystem "$SCAN_PATH" \
         --json 2>/dev/null | tee "$OUTPUT_DIR/trufflehog-report.jsonl" || true
 
@@ -442,7 +442,7 @@ scan_deep() {
     findings=$(wc -l < "$OUTPUT_DIR/trufflehog-report.jsonl" 2>/dev/null || echo 0)
     findings=$(echo "$findings" | tr -d ' ')
 
-    # 过滤已验证的密钥
+    # Filter verified keys
     local verified
     verified=$(grep -c '"Verified":true\|"verified":true' "$OUTPUT_DIR/trufflehog-report.jsonl" 2>/dev/null || echo 0)
     verified=$(echo "$verified" | tr -d ' ')
@@ -451,26 +451,26 @@ scan_deep() {
 
     echo ""
     if [ "$findings" -gt 0 ]; then
-        echo -e "${C_WARN}trufflehog 发现 $findings 个潜在密钥${C_RST}"
+        echo -e "${C_WARN}trufflehog found $findings potential keys${C_RST}"
         if [ "$verified" -gt 0 ]; then
-            echo -e "${C_FAIL}其中 $verified 个密钥已验证为有效 (仍然可用)!${C_RST}"
-            echo -e "${C_FAIL}这些密钥必须立即轮换!${C_RST}"
+            echo -e "${C_FAIL}$verified keys verified as valid (still usable)!${C_RST}"
+            echo -e "${C_FAIL}These keys must be rotated immediately!${C_RST}"
         else
-            echo -e "${C_OK}没有密钥被验证为有效 (可能已过期或是误报)${C_RST}"
+            echo -e "${C_OK}No keys verified as valid (may be expired or false positive)${C_RST}"
         fi
-        echo -e "${C_INFO}详细报告: $OUTPUT_DIR/trufflehog-report.jsonl${C_RST}"
+        echo -e "${C_INFO}Detailed report: $OUTPUT_DIR/trufflehog-report.jsonl${C_RST}"
     else
-        echo -e "${C_OK}未发现密钥${C_RST}"
+        echo -e "${C_OK}No keys found${C_RST}"
     fi
 }
 
-# ── CI/pre-commit 配置生成 ────────────────────────────────────
+# ── CI/pre-commit config generation ────────────────────────────────────
 generate_ci_config() {
-    echo -e "${C_WARN}>>> 生成 CI / pre-commit 配置 <<<${C_RST}"
+    echo -e "${C_WARN}>>> Generate CI / pre-commit config <<<${C_RST}"
 
     mkdir -p "$OUTPUT_DIR"
 
-    # GitHub Actions 配置
+    # GitHub Actions config
     mkdir -p "$OUTPUT_DIR/github-actions"
     cat > "$OUTPUT_DIR/github-actions/secret-scan.yml" <<'EOF'
 # GitHub Actions: Secret scanning with gitleaks
@@ -512,7 +512,7 @@ jobs:
           path: gitleaks-report.json
 EOF
 
-    # GitLab CI 配置
+    # GitLab CI config
     cat > "$OUTPUT_DIR/github-actions/gitlab-ci.yml" <<'EOF'
 # GitLab CI: Secret scanning with gitleaks
 # Add to .gitlab-ci.yml
@@ -590,30 +590,30 @@ paths = [
 ]
 EOF
 
-    echo -e "${C_OK}CI 配置已生成到 $OUTPUT_DIR:${C_RST}"
+    echo -e "${C_OK}CI config generated to $OUTPUT_DIR:${C_RST}"
     echo "  github-actions/secret-scan.yml   — GitHub Actions workflow"
     echo "  github-actions/gitlab-ci.yml     — GitLab CI job"
     echo "  pre-commit-hook.sh               — Git pre-commit hook"
     echo "  .pre-commit-config.yaml          — pre-commit framework config"
     echo "  gitleaks.toml                    — gitleaks project config"
     echo ""
-    echo -e "${C_INFO}将对应文件复制到项目根目录即可启用${C_RST}"
+    echo -e "${C_INFO}Copy corresponding files to project root to enable${C_RST}"
 }
 
-# ── 密钥管理审计 ──────────────────────────────────────────────
+# ── Key management audit ──────────────────────────────────────────────
 audit_secrets() {
-    echo -e "${C_WARN}>>> 密钥管理配置审计 (只读) <<<${C_RST}"
+    echo -e "${C_WARN}>>> Key management config audit (read-only) <<<${C_RST}"
     echo ""
     init_report
 
-    # --- 扫描工具状态 ---
-    echo -e "${C_INFO}[扫描工具]${C_RST}"
-    run_check "SEC-001" "gitleaks 已安装" check_cmd gitleaks
-    run_check "SEC-002" "trufflehog 已安装" check_cmd trufflehog
+    # --- Scan tool status ---
+    echo -e "${C_INFO}[Scan tools]${C_RST}"
+    run_check "SEC-001" "gitleaks Installed" check_cmd gitleaks
+    run_check "SEC-002" "trufflehog Installed" check_cmd trufflehog
 
-    # --- 敏感文件检查 ---
+    # --- Sensitive file check ---
     echo ""
-    echo -e "${C_INFO}[敏感文件]${C_RST}"
+    echo -e "${C_INFO}[Sensitive files]${C_RST}"
 
     local sensitive_files=(
         ".env"
@@ -644,36 +644,36 @@ audit_secrets() {
                 in_gitignore=$(grep -c "$f" "$SCAN_PATH/.gitignore" 2>/dev/null || echo 0)
             fi
             if [ "$in_gitignore" -gt 0 ]; then
-                run_check "SEC-003" "$f 存在且已在 .gitignore" bash -c "exit 2"
+                run_check "SEC-003" "$f exists and in .gitignore" bash -c "exit 2"
             else
-                run_check "SEC-003" "$f 存在且未在 .gitignore" bash -c "exit 1"
+                run_check "SEC-003" "$f exists and not in .gitignore" bash -c "exit 1"
             fi
         fi
     done
-    [ "$found_sensitive" -eq 0 ] && run_check "SEC-003" "敏感文件检查" true
+    [ "$found_sensitive" -eq 0 ] && run_check "SEC-003" "Sensitive file check" true
 
-    # --- .gitignore 检查 ---
+    # --- .gitignore check ---
     echo ""
     echo -e "${C_INFO}[.gitignore]${C_RST}"
 
     if [ -f "$SCAN_PATH/.gitignore" ]; then
-        run_check "SEC-004" ".gitignore 存在" true
+        run_check "SEC-004" ".gitignore exists" true
 
         local gitignore_patterns
         gitignore_patterns=$(grep -cE '\.env|id_rsa|\.pem|\.key|secret' "$SCAN_PATH/.gitignore" 2>/dev/null || echo 0)
         if [ "$gitignore_patterns" -gt 0 ]; then
-            run_check "SEC-005" ".gitignore 包含密钥相关模式 ($gitignore_patterns 个)" true
+            run_check "SEC-005" ".gitignore contains key-related patterns ($gitignore_patterns items)" true
         else
-            run_check "SEC-005" ".gitignore 包含密钥相关模式" bash -c "exit 1"
+            run_check "SEC-005" ".gitignore contains key-related patterns" bash -c "exit 1"
         fi
     else
-        run_check "SEC-004" ".gitignore 存在" bash -c "exit 1"
-        run_check "SEC-005" ".gitignore 包含密钥相关模式" bash -c "exit 2"
+        run_check "SEC-004" ".gitignore exists" bash -c "exit 1"
+        run_check "SEC-005" ".gitignore contains key-related patterns" bash -c "exit 2"
     fi
 
-    # --- 硬编码密钥模式扫描 ---
+    # --- Hardcoded key pattern scan ---
     echo ""
-    echo -e "${C_INFO}[硬编码密钥模式]${C_RST}"
+    echo -e "${C_INFO}[Hardcoded key patterns]${C_RST}"
 
     local patterns=(
         "AKIA[0-9A-Z]{16}              # AWS Access Key"
@@ -696,35 +696,35 @@ audit_secrets() {
         matches=$(grep -rl --include='*.sh' --include='*.py' --include='*.js' --include='*.ts' --include='*.yml' --include='*.yaml' --include='*.json' --include='*.conf' --include='*.env' --include='*.cfg' -E "$regex" "$SCAN_PATH" 2>/dev/null | head -5 || true)
         if [ -n "$matches" ]; then
             pattern_found=$((pattern_found + 1))
-            run_check "SEC-006" "未发现 $name 模式" bash -c "exit 1"
+            run_check "SEC-006" "No $name pattern found" bash -c "exit 1"
         fi
     done
-    [ "$pattern_found" -eq 0 ] && run_check "SEC-006" "未发现硬编码密钥模式" true
+    [ "$pattern_found" -eq 0 ] && run_check "SEC-006" "No hardcoded key patterns found" true
 
-    # --- CI/CD 密钥管理 ---
+    # --- CI/CD key management ---
     echo ""
-    echo -e "${C_INFO}[CI/CD 密钥管理]${C_RST}"
+    echo -e "${C_INFO}[CI/CD key management]${C_RST}"
 
     if [ -d "$SCAN_PATH/.github/workflows" ]; then
         local hardcoded_secrets
         hardcoded_secrets=$(grep -rl 'password\|secret\|token\|api_key' "$SCAN_PATH/.github/workflows" 2>/dev/null | \
             xargs grep -l 'value:.*[a-zA-Z0-9]\{20,\}' 2>/dev/null | wc -l || echo 0)
         if [ "$hardcoded_secrets" -eq 0 ]; then
-            run_check "SEC-007" "GitHub Actions 无硬编码密钥" true
+            run_check "SEC-007" "GitHub Actions has no hardcoded keys" true
         else
-            run_check "SEC-007" "GitHub Actions 可能存在硬编码密钥" bash -c "exit 1"
+            run_check "SEC-007" "GitHub Actions may contain hardcoded keys" bash -c "exit 1"
         fi
 
         local uses_secrets
         uses_secrets=$(grep -rl 'secrets\.' "$SCAN_PATH/.github/workflows" 2>/dev/null | wc -l || echo 0)
         if [ "$uses_secrets" -gt 0 ]; then
-            run_check "SEC-008" "GitHub Actions 使用 secrets 变量" true
+            run_check "SEC-008" "GitHub Actions uses secrets variables" true
         else
-            run_check "SEC-008" "GitHub Actions 使用 secrets 变量" bash -c "exit 2"
+            run_check "SEC-008" "GitHub Actions uses secrets variables" bash -c "exit 2"
         fi
     else
-        run_check "SEC-007" "GitHub Actions 无硬编码密钥" bash -c "exit 2"
-        run_check "SEC-008" "GitHub Actions 使用 secrets 变量" bash -c "exit 2"
+        run_check "SEC-007" "GitHub Actions has no hardcoded keys" bash -c "exit 2"
+        run_check "SEC-008" "GitHub Actions uses secrets variables" bash -c "exit 2"
     fi
 
     # --- pre-commit hook ---
@@ -735,44 +735,44 @@ audit_secrets() {
         local has_gitleaks
         has_gitleaks=$(grep -c 'gitleaks\|secret' "$SCAN_PATH/.git/hooks/pre-commit" 2>/dev/null || echo 0)
         if [ "$has_gitleaks" -gt 0 ]; then
-            run_check "SEC-009" "pre-commit hook 包含密钥扫描" true
+            run_check "SEC-009" "pre-commit hook includes key scanning" true
         else
-            run_check "SEC-009" "pre-commit hook 包含密钥扫描" bash -c "exit 2"
+            run_check "SEC-009" "pre-commit hook includes key scanning" bash -c "exit 2"
         fi
     else
-        run_check "SEC-009" "pre-commit hook 包含密钥扫描" bash -c "exit 2"
+        run_check "SEC-009" "pre-commit hook includes key scanning" bash -c "exit 2"
     fi
 
     # --- .gitleaksignore ---
     echo ""
-    echo -e "${C_INFO}[gitleaks 配置]${C_RST}"
+    echo -e "${C_INFO}[gitleaks config]${C_RST}"
 
     if [ -f "$SCAN_PATH/.gitleaksignore" ]; then
         local ignored_count
         ignored_count=$(grep -cv '^#\|^$' "$SCAN_PATH/.gitleaksignore" 2>/dev/null || echo 0)
-        run_check "SEC-010" ".gitleaksignore 存在 ($ignored_count 条忽略)" true
+        run_check "SEC-010" ".gitleaksignore exists ($ignored_count entries ignored)" true
     else
-        run_check "SEC-010" ".gitleaksignore 存在" bash -c "exit 2"
+        run_check "SEC-010" ".gitleaksignore exists" bash -c "exit 2"
     fi
 
     if [ -f "$SCAN_PATH/gitleaks.toml" ]; then
-        run_check "SEC-011" "gitleaks.toml 自定义配置存在" true
+        run_check "SEC-011" "gitleaks.toml custom config exists" true
     else
-        run_check "SEC-011" "gitleaks.toml 自定义配置存在" bash -c "exit 2"
+        run_check "SEC-011" "gitleaks.toml custom config exists" bash -c "exit 2"
     fi
 
-    # --- 文件权限 ---
+    # --- File permissions ---
     echo ""
-    echo -e "${C_INFO}[敏感文件权限]${C_RST}"
+    echo -e "${C_INFO}[Sensitive file permissions]${C_RST}"
 
     for f in "$HOME/.ssh/id_rsa" "$HOME/.ssh/id_ed25519" "$HOME/.env" "$HOME/.aws/credentials"; do
         if [ -f "$f" ]; then
             local perms
             perms=$(stat -c "%a" "$f" 2>/dev/null || stat -f "%Lp" "$f" 2>/dev/null || echo "???")
             if [ "$perms" = "600" ] || [ "$perms" = "400" ]; then
-                run_check "SEC-012" "$f 权限: $perms" true
+                run_check "SEC-012" "$f permissions: $perms" true
             else
-                run_check "SEC-012" "$f 权限: $perms (应为 600)" bash -c "exit 1"
+                run_check "SEC-012" "$f permissions: $perms (should be 600)" bash -c "exit 1"
             fi
         fi
     done
@@ -790,63 +790,63 @@ audit_secrets() {
             local uses_secrets_file
             uses_secrets_file=$(grep -c 'secrets:\|env_file:\|_FILE' "$compose_file" 2>/dev/null || echo 0)
             if [ "$uses_secrets_file" -gt 0 ]; then
-                run_check "SEC-013" "Docker Compose 使用 secrets/env_file" true
+                run_check "SEC-013" "Docker Compose uses secrets/env_file" true
             else
-                run_check "SEC-013" "Docker Compose 可能硬编码密钥" bash -c "exit 2"
+                run_check "SEC-013" "Docker Compose may contain hardcoded keys" bash -c "exit 2"
             fi
         else
-            run_check "SEC-013" "Docker Compose 密钥管理" true
+            run_check "SEC-013" "Docker Compose key management" true
         fi
     else
-        run_check "SEC-013" "Docker Compose 密钥管理" bash -c "exit 2"
+        run_check "SEC-013" "Docker Compose key management" bash -c "exit 2"
     fi
 
     print_summary
 }
 
-# ── 交互式向导 ────────────────────────────────────────────────
+# ── Interactive wizard ────────────────────────────────────────────────
 interactive_wizard() {
     while true; do
         clear
         echo -e "${C_OK}══════════════════════════════${C_RST}"
-        echo -e "${C_OK}   密钥与秘密扫描           ${C_RST}"
+        echo -e "${C_OK}   Key and secret scanning           ${C_RST}"
         echo -e "${C_OK}══════════════════════════════${C_RST}"
-        echo -e "  ${C_WARN}1.${C_RST} 🛡️ 审计密钥管理配置 (只读)"
-        echo -e "  ${C_WARN}2.${C_RST} 📦 安装 gitleaks + trufflehog"
-        echo -e "  ${C_WARN}3.${C_RST} 🔍 快速扫描 (gitleaks)"
-        echo -e "  ${C_WARN}4.${C_RST} 📜 扫描 git 历史"
-        echo -e "  ${C_WARN}5.${C_RST} 🏴 深度扫描 (trufflehog 验证)"
-        echo -e "  ${C_WARN}6.${C_RST} 📋 生成 CI/pre-commit 配置"
-        echo -e "  ${C_WARN}0.${C_RST} 返回"
+        echo -e "  ${C_WARN}1.${C_RST} 🛡️ Audit key management config (read-only)"
+        echo -e "  ${C_WARN}2.${C_RST} 📦 Install gitleaks + trufflehog"
+        echo -e "  ${C_WARN}3.${C_RST} 🔍 Quick scan (gitleaks)"
+        echo -e "  ${C_WARN}4.${C_RST} 📜 Scan git history"
+        echo -e "  ${C_WARN}5.${C_RST} 🏴 Deep scan (trufflehog verification)"
+        echo -e "  ${C_WARN}6.${C_RST} 📋 Generate CI/pre-commit config"
+        echo -e "  ${C_WARN}0.${C_RST} Back"
         echo
         local pick
-        read -r -p "❯ 选择 [0-6]: " pick
+        read -r -p "Select [0-6]: " pick
         case $pick in
             1) audit_secrets; wait_key ;;
             2) install_tools; wait_key ;;
             3)
-                read -r -p "扫描路径 (默认 .): " SCAN_PATH
+                read -r -p "Scan path (default .): " SCAN_PATH
                 [ -z "$SCAN_PATH" ] && SCAN_PATH="."
                 scan_secrets; wait_key
                 ;;
             4)
-                read -r -p "Git 仓库路径 (默认 .): " SCAN_PATH
+                read -r -p "Git repository path (default .): " SCAN_PATH
                 [ -z "$SCAN_PATH" ] && SCAN_PATH="."
                 scan_git_history; wait_key
                 ;;
             5)
-                read -r -p "扫描路径 (默认 .): " SCAN_PATH
+                read -r -p "Scan path (default .): " SCAN_PATH
                 [ -z "$SCAN_PATH" ] && SCAN_PATH="."
                 scan_deep; wait_key
                 ;;
             6) generate_ci_config; wait_key ;;
             0) break ;;
-            *) echo -e "${C_FAIL}无效输入${C_RST}"; sleep 1 ;;
+            *) echo -e "${C_FAIL}Invalid input${C_RST}"; sleep 1 ;;
         esac
     done
 }
 
-# ── 主入口 ────────────────────────────────────────────────────
+# ── Main entry ────────────────────────────────────────────────────
 main() {
     parse_args "$@"
 
@@ -858,7 +858,7 @@ main() {
         audit) audit_secrets ;;
         ci) generate_ci_config ;;
         interactive) interactive_wizard ;;
-        *) echo "未知模式: $MODE"; exit 1 ;;
+        *) echo "Unknown mode: $MODE"; exit 1 ;;
     esac
 }
 

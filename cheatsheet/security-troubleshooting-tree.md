@@ -46,7 +46,7 @@ Service unreachable?
 │   └─ Cloud security group too
 ├─ Docker bypassing UFW? ─────────── iptables -L -n | grep DOCKER
 │   ├─ Published port ignores UFW (see docker cheatsheet)
-│   └─ Fix: vps_secure.sh  →  d1  →  Docker  →  UFW 接管
+│   └─ Fix: vps_secure.sh  →  d1  →  Docker  →  UFW takeover
 ├─ DNS resolving? ────────────────── dig <domain> +short
 │   ├─ Wrong IP → fix DNS A record
 │   └─ No answer → check resolver: dig @1.1.1.1 <domain>
@@ -145,7 +145,7 @@ Website slow?
 
 ```
 Suspicious activity?
-├─ Check logins ──────────────────── vps_secure.sh  →  c1  →  登录轨迹
+├─ Check logins ──────────────────── vps_secure.sh  →  c1  →  Login Trail
 │   ├─ last            (successful logins)
 │   ├─ lastb           (failed logins)
 │   └─ /var/log/auth.log  (Debian) / /var/log/secure (RHEL)

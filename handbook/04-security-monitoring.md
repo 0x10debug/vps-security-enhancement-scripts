@@ -297,7 +297,7 @@ For a single VPS, `journalctl` + `logrotate` is sufficient. Centralized logging 
 ### Fail2Ban logs
 
 ```bash
-secure-vps  # b3 → 3 (查看拦截日志)
+secure-vps  # b3 → 3 (View block logs)
 # Shows last 15 lines of /var/log/fail2ban.log
 
 # Manual:
@@ -337,7 +337,7 @@ grep 'Accepted' /var/log/auth.log | tail -20
 grep 'Failed password' /var/log/secure | tail -20
 
 # Via vps_secure.sh:
-secure-vps  # c1 → 7 (登录轨迹 / Login Trail)
+secure-vps  # c1 → 7 (Login Trail)
 # Shows recent failed attempts and login history
 ```
 
@@ -346,7 +346,7 @@ secure-vps  # c1 → 7 (登录轨迹 / Login Trail)
 AIDE (Advanced Intrusion Detection Environment) tracks file changes. After the initial baseline (Chapter 02), it runs daily and reports any modified system files:
 
 ```bash
-secure-vps  # b4 → 8 → 3 (AIDE 立即比对)
+secure-vps  # b4 → 8 → 3 (AIDE immediate comparison)
 # Runs integrity check, reports any changed files
 
 # Manual:

@@ -1,25 +1,25 @@
 #!/bin/bash
 # ════════════════════════════════════════════════════════════
 #  dockerfile_hardener.sh — Dockerfile Security Analysis & Hardening
-#  适用系统: 任何 Linux/macOS 主机
-#  运行身份: 普通用户
-#  模式: 只读分析 (默认) / 自动修复 (--fix)
-#  参考: macbuildssys/dockerfile-hardener + CIS Docker Benchmark 4.x
-#  项目主页: https://github.com/0x10debug/vps-security-enhancement-scripts
+#  Supported OS: Any Linux/macOS host
+#  Run as: Regular user
+#  Mode: Read-only analysis (default) / auto-fix (--fix)
+#  Reference: macbuildssys/dockerfile-hardener + CIS Docker Benchmark 4.x
+#  Project home: https://github.com/0x10debug/vps-security-enhancement-scripts
 # ════════════════════════════════════════════════════════════
 #
-# 用法:
-#   ./scripts/dockerfile_hardener.sh Dockerfile                    # 分析单个 Dockerfile
-#   ./scripts/dockerfile_hardener.sh ./path/to/Dockerfile          # 分析指定路径
-#   ./scripts/dockerfile_hardener.sh --fix Dockerfile              # 分析 + 自动修复
-#   ./scripts/dockerfile_hardener.sh --sarif Dockerfile            # 输出 SARIF v2.1.0 报告
-#   ./scripts/dockerfile_hardener.sh --quiet Dockerfile            # 只输出摘要
-#   ./scripts/dockerfile_hardener.sh -r ./                         # 递归扫描目录下所有 Dockerfile
+# Usage:
+#   ./scripts/dockerfile_hardener.sh Dockerfile                    # Analyze single Dockerfile
+#   ./scripts/dockerfile_hardener.sh ./path/to/Dockerfile          # Analyze specified path
+#   ./scripts/dockerfile_hardener.sh --fix Dockerfile              # Analyze + auto-fix
+#   ./scripts/dockerfile_hardener.sh --sarif Dockerfile            # Output SARIF v2.1.0 report
+#   ./scripts/dockerfile_hardener.sh --quiet Dockerfile            # Summary only
+#   ./scripts/dockerfile_hardener.sh -r ./                         # Recursively scan all Dockerfiles in directory
 #
-# 退出码:
-#   0 — 分析完成 (无论是否发现问题)
-#   1 — 参数错误 / 文件不存在
-#   2 — 修复模式中部分修复失败
+# Exit codes:
+#   0 — Analysis complete (regardless of findings)
+#   1 — Parameter error / file not found
+#   2 — Some fixes failed in fix mode
 
 set -euo pipefail
 
@@ -48,7 +48,7 @@ C_WARN='\033[0;33m'
 C_INFO='\033[0;34m'
 C_RST='\033[0m'
 
-# ── 参数解析 ─────────────────────────────────────────────────
+# ── Parameter parsing ─────────────────────────────────────────────────
 parse_args() {
     while [ $# -gt 0 ]; do
         case "$1" in
@@ -57,17 +57,17 @@ parse_args() {
             --sarif) SARIF_ONLY=1; shift ;;
             -r|--recursive) RECURSIVE=1; shift ;;
             -h|--help) sed -n '2,20p' "$0"; exit 0 ;;
-            -*) echo "未知参数: $1"; exit 1 ;;
+            -*) echo "Unknown parameter: $1"; exit 1 ;;
             *) TARGET="$1"; shift ;;
         esac
     done
     if [ -z "$TARGET" ]; then
-        echo "用法: $0 [--fix] [--sarif] [--quiet] [-r] <Dockerfile|目录>"
+        echo "Usage: $0 [--fix] [--sarif] [--quiet] [-r] <Dockerfile|directory>"
         exit 1
     fi
 }
 
-# ── 报告初始化 ───────────────────────────────────────────────
+# ── Report initialization ───────────────────────────────────────────────
 init_report() {
     if ! mkdir -p "$REPORT_DIR" 2>/dev/null; then
         REPORT_DIR="/tmp/dockerfile-hardener"
@@ -87,7 +87,7 @@ init_report() {
     } > "$REPORT_TXT"
 }
 
-# ── 检查结果记录 ─────────────────────────────────────────────
+# ── Check results recording ─────────────────────────────────────────────
 record_result() {
     local rule_id="$1" severity="$2" message="$3" line_no="${4:-0}" suggestion="${5:-}"
     TOTAL_CHECKS=$((TOTAL_CHECKS + 1))
@@ -150,22 +150,22 @@ EOF
     fi
 }
 
-# ── 收集 Dockerfile 行 ───────────────────────────────────────
-# 读取文件并保留行号, 跳过注释和空行
+# ── Collect Dockerfile lines ───────────────────────────────────────
+# Read file preserving line numbers, skip comments and empty lines
 get_lines() {
     local file="$1"
     awk 'NF && $1 !~ /^#/ { printf "%d\t%s\n", NR, $0 }' "$file"
 }
 
-# 提取指令关键字 (FROM/RUN/COPY/ADD/USER/ENV/HEALTHCHECK 等)
+# Extract instruction keyword (FROM/RUN/COPY/ADD/USER/ENV/HEALTHCHECK etc.)
 get_directive() {
     local line="$1"
     echo "$line" | awk '{print toupper($1)}'
 }
 
-# ── 检查函数 ─────────────────────────────────────────────────
+# ── Check functions ─────────────────────────────────────────────────
 
-# DF-001: FROM :latest 检测
+# DF-001: FROM :latest detection
 check_from_latest() {
     local file="$1"
     local line_no line
@@ -175,93 +175,93 @@ check_from_latest() {
         if [ "$directive" = "FROM" ]; then
             local image
             image=$(echo "$line" | awk '{print $2}')
-            # 去掉 AS alias 部分
+            # Remove AS alias part
             image=${image%% *}
             if echo "$image" | grep -qE ':latest$'; then
-                record_result "DF-001" "error" "FROM 使用 :latest 标签: $image" "$line_no" \
-                    "替换为具体版本, 如 nginx:1.27.2-alpine"
+                record_result "DF-001" "error" "FROM uses :latest tag: $image" "$line_no" \
+                    "Replace with specific version, e.g. nginx:1.27.2-alpine"
             elif ! echo "$image" | grep -qE ':'; then
-                record_result "DF-001" "error" "FROM 未指定版本标签: $image" "$line_no" \
-                    "添加具体版本, 如 $image:1.27.2"
+                record_result "DF-001" "error" "FROM missing version tag: $image" "$line_no" \
+                    "Add specific version, e.g. $image:1.27.2"
             fi
         fi
     done < <(get_lines "$file")
 }
 
-# DF-002: 缺少 USER 指令 (以 root 运行)
+# DF-002: Missing USER instruction (runs as root)
 check_no_user() {
     local file="$1"
     if ! grep -qiE '^[[:space:]]*USER[[:space:]]' "$file"; then
-        record_result "DF-002" "warning" "未设置 USER 指令, 容器默认以 root 运行" 0 \
-            "添加 USER <non-root-user>, 并在前面 useradd 创建用户"
+        record_result "DF-002" "warning" "No USER instruction set, container runs as root by default" 0 \
+            "Add USER <non-root-user>, and create user with useradd first"
     fi
 }
 
-# DF-003: USER root 显式声明
+# DF-003: USER root explicit declaration
 check_user_root() {
     local file="$1"
     local line_no line
     while IFS=$'\t' read -r line_no line; do
         if echo "$line" | grep -qiE '^USER[[:space:]]+root'; then
-            record_result "DF-003" "error" "USER 显式声明为 root" "$line_no" \
-                "使用非 root 用户, 如 USER appuser"
+            record_result "DF-003" "error" "USER explicitly set to root" "$line_no" \
+                "Use non-root user, e.g. USER appuser"
         fi
     done < <(get_lines "$file")
 }
 
-# DF-004: ENV 中硬编码 secrets
+# DF-004: Hardcoded secrets in ENV
 check_env_secrets() {
     local file="$1"
     local line_no line
     while IFS=$'\t' read -r line_no line; do
         if echo "$line" | grep -qiE '^ENV[[:space:]]' && \
            echo "$line" | grep -qiE '(PASSWORD|PASSWD|SECRET|API_KEY|TOKEN|PRIVATE_KEY|CREDENTIAL)[[:space:]]*='; then
-            record_result "DF-004" "error" "ENV 中检测到硬编码 secret 关键字" "$line_no" \
-                "使用运行时注入: 环境变量 / Docker secrets / Vault"
+            record_result "DF-004" "error" "Hardcoded secret keyword detected in ENV" "$line_no" \
+                "Use runtime injection: env vars / Docker secrets / Vault"
         fi
     done < <(get_lines "$file")
 }
 
-# DF-005: ARG 中硬编码 secrets
+# DF-005: Hardcoded secrets in ARG
 check_arg_secrets() {
     local file="$1"
     local line_no line
     while IFS=$'\t' read -r line_no line; do
         if echo "$line" | grep -qiE '^ARG[[:space:]]' && \
            echo "$line" | grep -qiE '(PASSWORD|PASSWD|SECRET|API_KEY|TOKEN|PRIVATE_KEY|CREDENTIAL)'; then
-            record_result "DF-005" "error" "ARG 中检测到 secret 关键字 (ARG 会留在镜像历史)" "$line_no" \
-                "ARG 中的 secret 会留在镜像层历史, 改用 BuildKit --mount=type=secret"
+            record_result "DF-005" "error" "Secret keyword detected in ARG (ARG persists in image history)" "$line_no" \
+                "ARG secrets persist in image layer history, use BuildKit --mount=type=secret instead"
         fi
     done < <(get_lines "$file")
 }
 
-# DF-006: 缺少 HEALTHCHECK
+# DF-006: Missing HEALTHCHECK
 check_no_healthcheck() {
     local file="$1"
     if ! grep -qiE '^[[:space:]]*HEALTHCHECK[[:space:]]' "$file"; then
-        record_result "DF-006" "warning" "缺少 HEALTHCHECK 指令" 0 \
-            "添加 HEALTHCHECK --interval=30s --timeout=3s CMD curl -f http://localhost/ || exit 1"
+        record_result "DF-006" "warning" "Missing HEALTHCHECK instruction" 0 \
+            "Add HEALTHCHECK --interval=30s --timeout=3s CMD curl -f http://localhost/ || exit 1"
     fi
 }
 
-# DF-007: 使用 ADD 而非 COPY (URL/压缩包场景除外)
+# DF-007: Uses ADD instead of COPY (except URL/archive scenarios)
 check_add_usage() {
     local file="$1"
     local line_no line
     while IFS=$'\t' read -r line_no line; do
         if echo "$line" | grep -qiE '^ADD[[:space:]]'; then
-            # ADD 合法场景: URL 或 .tar.gz 自动解压
+            # ADD valid scenario: URL or .tar.gz auto-extract
             if echo "$line" | grep -qE 'https?://|\.tar\.(gz|bz2|xz)' ; then
-                record_result "DF-007" "info" "ADD 用于 URL/压缩包 (合法场景)" "$line_no"
+                record_result "DF-007" "info" "ADD used for URL/archive (valid scenario)" "$line_no"
             else
-                record_result "DF-007" "warning" "使用 ADD 而非 COPY (非 URL/压缩包场景)" "$line_no" \
-                    "改用 COPY, ADD 会引入自动解压等隐式行为"
+                record_result "DF-007" "warning" "Uses ADD instead of COPY (non-URL/archive scenario)" "$line_no" \
+                    "Use COPY instead, ADD introduces implicit behaviors like auto-extract"
             fi
         fi
     done < <(get_lines "$file")
 }
 
-# DF-008: apt-get install 后未清理缓存
+# DF-008: apt-get install without cleaning cache
 check_apt_no_cleanup() {
     local file="$1"
     local line_no line
@@ -269,7 +269,7 @@ check_apt_no_cleanup() {
         if echo "$line" | grep -qiE 'apt-get[[:space:]]+install' && \
            ! echo "$line" | grep -qiE 'rm[[:space:]]+-rf[[:space:]]+/var/lib/apt/lists' && \
            ! echo "$line" | grep -qiE 'apt-get[[:space:]]+clean'; then
-            # 检查后续 5 行是否有清理
+            # Check next 5 lines for cleanup
             local has_cleanup=0
             local end=$((line_no + 5))
             local n
@@ -281,143 +281,143 @@ check_apt_no_cleanup() {
                 fi
             done
             if [ "$has_cleanup" -eq 0 ]; then
-                record_result "DF-008" "warning" "apt-get install 后未清理 apt 缓存" "$line_no" \
-                    "同层追加: && rm -rf /var/lib/apt/lists/*"
+                record_result "DF-008" "warning" "apt-get install without cleaning apt cache" "$line_no" \
+                    "Append in same layer: && rm -rf /var/lib/apt/lists/**"
             fi
         fi
     done < <(get_lines "$file")
 }
 
-# DF-009: apt-get install 未使用 --no-install-recommends
+# DF-009: apt-get install without --no-install-recommends
 check_apt_no_install_recommends() {
     local file="$1"
     local line_no line
     while IFS=$'\t' read -r line_no line; do
         if echo "$line" | grep -qiE 'apt-get[[:space:]]+install' && \
            ! echo "$line" | grep -qiE '\-\-no-install-recommends'; then
-            record_result "DF-009" "info" "apt-get install 未使用 --no-install-recommends" "$line_no" \
-                "添加 --no-install-recommends 减小镜像体积"
+            record_result "DF-009" "info" "apt-get install without --no-install-recommends" "$line_no" \
+                "Add --no-install-recommends to reduce image size"
         fi
     done < <(get_lines "$file")
 }
 
-# DF-010: chmod 777 (过度权限)
+# DF-010: chmod 777 (excessive permissions)
 check_chmod_777() {
     local file="$1"
     local line_no line
     while IFS=$'\t' read -r line_no line; do
         if echo "$line" | grep -qE 'chmod[[:space:]]+777'; then
-            record_result "DF-010" "error" "chmod 777 赋予所有用户 rwx" "$line_no" \
-                "使用最小权限, 如 chmod 750 或 chmod 640"
+            record_result "DF-010" "error" "chmod 777 grants rwx to all users" "$line_no" \
+                "Use least privilege, e.g. chmod 750 or chmod 640"
         fi
     done < <(get_lines "$file")
 }
 
-# DF-011: 使用 sudo (容器内不应有 sudo)
+# DF-011: Uses sudo (sudo should not be in container)
 check_sudo() {
     local file="$1"
     local line_no line
     while IFS=$'\t' read -r line_no line; do
         if echo "$line" | grep -qE '(^|[[:space:]])sudo([[:space:]]|$)'; then
-            record_result "DF-011" "warning" "RUN 中使用 sudo (容器内通常不需要)" "$line_no" \
-                "容器以 root 构建阶段运行, 无需 sudo; 或用 gosu/su-exec 切换用户"
+            record_result "DF-011" "warning" "Uses sudo in RUN (usually unnecessary in container)" "$line_no" \
+                "Container runs as root during build, no sudo needed; or use gosu/su-exec to switch user"
         fi
     done < <(get_lines "$file")
 }
 
-# DF-012: curl/wget 管道到 shell (盲目执行远程脚本)
+# DF-012: curl/wget pipe to shell (blindly executing remote script)
 check_curl_pipe_shell() {
     local file="$1"
     local line_no line
     while IFS=$'\t' read -r line_no line; do
         if echo "$line" | grep -qE '(curl|wget)[^|]*\|[[:space:]]*(sh|bash|/bin/sh|/bin/bash)'; then
-            record_result "DF-012" "error" "curl/wget 管道直接执行远程脚本" "$line_no" \
-                "先下载、校验 checksum、再执行; 或使用 COPY 拷入脚本"
+            record_result "DF-012" "error" "curl/wget pipe directly executing remote script" "$line_no" \
+                "Download, verify checksum, then execute; or use COPY to bring in script"
         fi
     done < <(get_lines "$file")
 }
 
-# DF-013: COPY . . (可能复制敏感文件)
+# DF-013: COPY . . (may copy sensitive files)
 check_copy_all() {
     local file="$1"
     local line_no line
     while IFS=$'\t' read -r line_no line; do
         if echo "$line" | grep -qE '^COPY[[:space:]]+\.[[:space:]]+\.'; then
-            record_result "DF-013" "warning" "COPY . . 可能复制敏感文件 (.env/.git/密钥)" "$line_no" \
-                "使用 .dockerignore 排除敏感文件, 或精确 COPY 指定路径"
+            record_result "DF-013" "warning" "COPY . . may copy sensitive files (.env/.git/keys)" "$line_no" \
+                "Use .dockerignore to exclude sensitive files, or use precise COPY"
         fi
     done < <(get_lines "$file")
 }
 
-# DF-014: .dockerignore 缺失
+# DF-014: Missing .dockerignore
 check_no_dockerignore() {
     local dir
     dir=$(dirname "$1")
     if [ ! -f "$dir/.dockerignore" ]; then
-        record_result "DF-014" "warning" "缺少 .dockerignore 文件" 0 \
-            "创建 .dockerignore 排除 .git .env *.pem node_modules 等"
+        record_result "DF-014" "warning" "Missing .dockerignore file" 0 \
+            "Create .dockerignore to exclude .git .env *.pem node_modules etc"
     fi
 }
 
-# DF-015: ENTRYPOINT/CMD 使用 shell 形式 (信号传递问题)
+# DF-015: ENTRYPOINT/CMD uses shell form (signal propagation issue)
 check_shell_form_cmd() {
     local file="$1"
     local line_no line
     while IFS=$'\t' read -r line_no line; do
         if echo "$line" | grep -qE '^(ENTRYPOINT|CMD)[[:space:]]+[^[]' && \
            ! echo "$line" | grep -qE '^(ENTRYPOINT|CMD)[[:space:]]+\[' ; then
-            record_result "DF-015" "warning" "ENTRYPOINT/CMD 使用 shell 形式 (PID 1 是 shell, 信号无法传递)" "$line_no" \
-                "使用 exec 形式: CMD [\"executable\", \"arg\"]"
+            record_result "DF-015" "warning" "ENTRYPOINT/CMD uses shell form (PID 1 is shell, signals cannot propagate)" "$line_no" \
+                "Use exec form: CMD [\"executable\", \"arg\"]"
         fi
     done < <(get_lines "$file")
 }
 
-# DF-016: RUN 指令链过长 (层数过多)
+# DF-016: RUN chain too long (too many layers)
 check_many_layers() {
     local file="$1"
     local run_count
     run_count=$(grep -ciE '^RUN[[:space:]]' "$file" 2>/dev/null || true)
     run_count=${run_count:-0}
     if [ "$run_count" -gt 10 ]; then
-        record_result "DF-016" "info" "RUN 指令 $run_count 个, 建议合并减少层数" 0 \
-            "用 && 连接多个 RUN 命令, 减少镜像层数"
+        record_result "DF-016" "info" "$run_count RUN instructions, consider merging to reduce layers" 0 \
+            "Chain multiple RUN commands with && to reduce image layers"
     fi
 }
 
-# DF-017: EXPOSE 端口过多
+# DF-017: Too many EXPOSE ports
 check_expose_ports() {
     local file="$1"
     local port_count
     port_count=$(grep -ciE '^EXPOSE[[:space:]]' "$file" 2>/dev/null || true)
     port_count=${port_count:-0}
     if [ "$port_count" -gt 5 ]; then
-        record_result "DF-017" "info" "EXPOSE $port_count 个端口, 检查是否必要" 0 \
-            "仅暴露必要端口, 内部服务不需要 EXPOSE"
+        record_result "DF-017" "info" "$port_count EXPOSE ports, check if necessary" 0 \
+            "Only expose necessary ports, internal services do not need EXPOSE"
     fi
 }
 
-# DF-018: 未使用多阶段构建
+# DF-018: Multi-stage build not used
 check_no_multistage() {
     local file="$1"
     local from_count
     from_count=$(grep -ciE '^FROM[[:space:]]' "$file" 2>/dev/null || true)
     from_count=${from_count:-0}
     if [ "$from_count" -lt 2 ]; then
-        record_result "DF-018" "info" "未使用多阶段构建 (single-stage)" 0 \
-            "编译阶段与运行阶段分离, 减小最终镜像体积"
+        record_result "DF-018" "info" "Multi-stage build not used (single-stage)" 0 \
+            "Separate build and runtime stages to reduce final image size"
     fi
 }
 
-# ── 分析单个 Dockerfile ──────────────────────────────────────
+# ── Analyze single Dockerfile ──────────────────────────────────────
 analyze_dockerfile() {
     local file="$1"
     if [ ! -f "$file" ]; then
-        echo -e "${C_FAIL}文件不存在: $file${C_RST}"
+        echo -e "${C_FAIL}File does not exist: $file${C_RST}"
         return 1
     fi
     if [ "$QUIET" -eq 0 ]; then
         echo ""
-        echo -e "${C_INFO}━━━ 分析: $file ━━━${C_RST}"
+        echo -e "${C_INFO}━━━ Analysis: $file ━━━${C_RST}"
     fi
 
     check_from_latest "$file"
@@ -444,7 +444,7 @@ analyze_dockerfile() {
     fi
 }
 
-# ── 自动修复 ─────────────────────────────────────────────────
+# ── Auto-fix ─────────────────────────────────────────────────
 apply_fixes() {
     local file="$1"
     local fixed=0
@@ -452,9 +452,9 @@ apply_fixes() {
     cp "$file" "$tmp"
 
     echo ""
-    echo -e "${C_WARN}>>> 自动修复: $file → $tmp ${C_RST}"
+    echo -e "${C_WARN}>>> Auto-fix: $file → $tmp ${C_RST}"
 
-    # 修复 1: ADD → COPY (非 URL/压缩包场景)
+    # Fix 1: ADD → COPY (non-URL/archive scenario)
     local modified
     modified=$(awk '
         /^[[:space:]]*ADD[[:space:]]/ && !/https?:\/\// && !/\.tar\.(gz|bz2|xz)/ {
@@ -466,12 +466,12 @@ apply_fixes() {
     ' "$tmp")
     echo "$modified" > "$tmp"
 
-    # 修复 2: :latest → 提示用户 (不自动替换, 因为不知道目标版本)
+    # Fix 2: :latest → prompt user (not auto-replaced, target version unknown)
     if grep -qE 'FROM[[:space:]]+[^[:space:]]+:latest' "$tmp"; then
-        echo -e "${C_WARN}  → 检测到 :latest, 请手动替换为具体版本 (未自动修改)${C_RST}"
+        echo -e "${C_WARN}  → Detected :latest, please manually replace with specific version (not auto-modified)${C_RST}"
     fi
 
-    # 修复 3: 缺少 HEALTHCHECK → 追加默认
+    # Fix 3: Missing HEALTHCHECK → append default
     if ! grep -qiE '^[[:space:]]*HEALTHCHECK[[:space:]]' "$tmp"; then
         {
             echo ""
@@ -479,12 +479,12 @@ apply_fixes() {
             echo "HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \\"
             echo "  CMD curl -f http://localhost/ || exit 1"
         } >> "$tmp"
-        echo -e "${C_OK}  → 追加默认 HEALTHCHECK${C_RST}"
+        echo -e "${C_OK}  → Append default HEALTHCHECK${C_RST}"
         fixed=1
     fi
 
-    # 修复 4: apt-get install 后追加清理 (仅在同一 RUN 行末尾)
-    # 使用 perl 处理多行 RUN ... && apt-get install ... 场景
+    # Fix 4: Append cleanup after apt-get install (only at end of same RUN line)
+    # Use perl for multi-line RUN ... && apt-get install ... scenarios
     if grep -qE 'apt-get[[:space:]]+install' "$tmp"; then
         perl -i -pe '
             if (/apt-get install/ && !/rm -rf \/var\/lib\/apt\/lists/ && !/apt-get clean/) {
@@ -493,11 +493,11 @@ apply_fixes() {
                 $_ .= " && rm -rf /var/lib/apt/lists/*\n" unless /\\$/;
             }
         ' "$tmp" 2>/dev/null || true
-        echo -e "${C_OK}  → 尝试追加 apt 缓存清理${C_RST}"
+        echo -e "${C_OK}  → Attempt to append apt cache cleanup${C_RST}"
         fixed=1
     fi
 
-    # 修复 5: 创建 .dockerignore (如缺失)
+    # Fix 5: Create .dockerignore (if missing)
     local dir
     dir=$(dirname "$file")
     if [ ! -f "$dir/.dockerignore" ]; then
@@ -518,21 +518,21 @@ venv
 README.md
 LICENSE
 EOF
-        echo -e "${C_OK}  → 创建 .dockerignore${C_RST}"
+        echo -e "${C_OK}  → Create .dockerignore${C_RST}"
         fixed=1
     fi
 
     if [ "$fixed" -eq 1 ]; then
-        echo -e "${C_OK}  修复完成, 新文件: $tmp${C_RST}"
-        echo -e "${C_INFO}  请 diff 检查后替换原文件: diff $file $tmp${C_RST}"
+        echo -e "${C_OK}  Fix complete, new file: $tmp${C_RST}"
+        echo -e "${C_INFO}  Please diff and replace original file: diff $file $tmp${C_RST}"
         echo "  [FIX] Applied to $tmp" >> "$REPORT_TXT"
     else
-        echo -e "${C_INFO}  无可自动修复项${C_RST}"
+        echo -e "${C_INFO}  No auto-fixable items${C_RST}"
         rm -f "$tmp"
     fi
 }
 
-# ── SARIF 报告 ───────────────────────────────────────────────
+# ── SARIF report ───────────────────────────────────────────────
 write_sarif_report() {
     cat > "$REPORT_SARIF" <<EOF
 {
@@ -552,7 +552,7 @@ write_sarif_report() {
 EOF
 }
 
-# ── 摘要 ─────────────────────────────────────────────────────
+# ── Summary ─────────────────────────────────────────────────────
 print_summary() {
     echo ""
     echo -e "${C_INFO}╔══════════════════════════════════════════╗${C_RST}"
@@ -568,17 +568,17 @@ print_summary() {
     printf "  ${C_INFO}INFO${C_RST}:  %d\n" "$COUNT_INFO"
     printf "  Total: %d\n" "$TOTAL_CHECKS"
     echo ""
-    echo -e "报告: $REPORT_TXT"
+    echo -e "Report: $REPORT_TXT"
     if [ "$SARIF_ONLY" -eq 1 ]; then
         echo -e "SARIF: $REPORT_SARIF"
     fi
 }
 
-# ── 递归扫描 ─────────────────────────────────────────────────
+# ── Recursive scan ─────────────────────────────────────────────────
 scan_recursive() {
     local dir="$1"
     if [ ! -d "$dir" ]; then
-        echo -e "${C_FAIL}目录不存在: $dir${C_RST}"
+        echo -e "${C_FAIL}Directory does not exist: $dir${C_RST}"
         exit 1
     fi
     local count=0
@@ -587,14 +587,14 @@ scan_recursive() {
         count=$((count + 1))
     done < <(find "$dir" -type f -name "Dockerfile*" 2>/dev/null)
     if [ "$count" -eq 0 ]; then
-        echo -e "${C_WARN}未找到 Dockerfile${C_RST}"
+        echo -e "${C_WARN}No Dockerfile found${C_RST}"
     else
         echo ""
-        echo -e "${C_INFO}扫描完成, 共 $count 个 Dockerfile${C_RST}"
+        echo -e "${C_INFO}Scan complete, total $count  Dockerfiles${C_RST}"
     fi
 }
 
-# ── 主流程 ───────────────────────────────────────────────────
+# ── Main flow ───────────────────────────────────────────────────
 main() {
     parse_args "$@"
     init_report

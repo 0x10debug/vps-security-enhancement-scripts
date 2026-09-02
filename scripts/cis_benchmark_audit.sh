@@ -1,28 +1,28 @@
 #!/bin/bash
 # ════════════════════════════════════════════════════════════
 #  cis_benchmark_audit.sh — CIS Benchmark Compliance Audit
-#  适用系统: Ubuntu / Debian / RHEL / CentOS / AlmaLinux / Rocky
-#  运行身份: root (推荐) / 普通用户 (部分检查受限)
-#  审计模式: 只读, 不修改任何系统配置
-#  参考: CIS Benchmarks v2.0.0 (Ubuntu 22.04/24.04, RHEL 8/9)
-#  项目主页: https://github.com/0x10debug/vps-security-enhancement-scripts
+#  Supported OS: Ubuntu / Debian / RHEL / CentOS / AlmaLinux / Rocky
+#  Run as: root (recommended) / Regular user (some checks limited)
+#  Audit mode: Read-only, no modifications to system config
+#  Reference: CIS Benchmarks v2.0.0 (Ubuntu 22.04/24.04, RHEL 8/9)
+#  Project home: https://github.com/0x10debug/vps-security-enhancement-scripts
 # ════════════════════════════════════════════════════════════
 #
-# 用法:
-#   sudo ./cis_benchmark_audit.sh              # 交互式选择级别
-#   sudo ./cis_benchmark_audit.sh --level 1    # Level 1 (基础)
-#   sudo ./cis_benchmark_audit.sh --level 2    # Level 2 (深度)
-#   sudo ./cis_benchmark_audit.sh --json       # 输出 JSON 报告路径
-#   sudo ./cis_benchmark_audit.sh --quiet      # 只输出摘要
+# Usage:
+#   sudo ./cis_benchmark_audit.sh              # Interactive level selection
+#   sudo ./cis_benchmark_audit.sh --level 1    # Level 1 (Basic)
+#   sudo ./cis_benchmark_audit.sh --level 2    # Level 2 (Deep)
+#   sudo ./cis_benchmark_audit.sh --json       # Output JSON report path
+#   sudo ./cis_benchmark_audit.sh --quiet      # Summary only
 #
-# 退出码:
-#   0 — 审计完成 (不论是否合规)
-#   1 — 参数错误
-#   2 — 不支持的发行版
+# Exit codes:
+#   0 — Audit complete (regardless of compliance)
+#   1 — Parameter error
+#   2 — Unsupported distribution
 
 set -euo pipefail
 
-# ── 全局变量 ─────────────────────────────────────────────────
+# ── Global variables ─────────────────────────────────────────────────
 APP_NAME="cis_benchmark_audit"
 APP_VER="v2.1.0"
 CIS_LEVEL=1
@@ -33,24 +33,24 @@ REPORT_TXT=""
 REPORT_JSON=""
 TIMESTAMP=$(date +%Y%m%d%H%M%S)
 
-# 计数器
+# Counters
 COUNT_PASS=0
 COUNT_FAIL=0
 COUNT_WARN=0
 COUNT_SKIP=0
 TOTAL_CHECKS=0
 
-# JSON 结果数组
+# JSON results array
 JSON_RESULTS="["
 
-# 颜色
+# Colors
 C_FAIL='\033[0;31m'
 C_OK='\033[0;32m'
 C_WARN='\033[0;33m'
 C_INFO='\033[0;34m'
 C_RST='\033[0m'
 
-# ── 发行版探测 ───────────────────────────────────────────────
+# ── Distro detection ───────────────────────────────────────────────
 detect_distro() {
     if [ -f /etc/os-release ]; then
         . /etc/os-release
@@ -60,14 +60,14 @@ detect_distro() {
         case "$ID" in
             ubuntu|debian) DISTRO_FAMILY="debian" ;;
             rhel|centos|almalinux|rocky|ol) DISTRO_FAMILY="rhel" ;;
-            *) echo "不支持的发行版: $ID"; exit 2 ;;
+            *) echo "Unsupported distribution: $ID"; exit 2 ;;
         esac
     else
-        echo "无法检测发行版 (缺少 /etc/os-release)"; exit 2
+        echo "Cannot detect distribution (missing /etc/os-release)"; exit 2
     fi
 }
 
-# ── 参数解析 ─────────────────────────────────────────────────
+# ── Parameter parsing ─────────────────────────────────────────────────
 parse_args() {
     while [ $# -gt 0 ]; do
         case "$1" in
@@ -78,15 +78,15 @@ parse_args() {
                 sed -n '2,20p' "$0"
                 exit 0
                 ;;
-            *) echo "未知参数: $1"; exit 1 ;;
+            *) echo "Unknown parameter: $1"; exit 1 ;;
         esac
     done
     if [ "$CIS_LEVEL" != "1" ] && [ "$CIS_LEVEL" != "2" ]; then
-        echo "级别必须是 1 或 2"; exit 1
+        echo "Level must be 1 or 2"; exit 1
     fi
 }
 
-# ── 报告初始化 ───────────────────────────────────────────────
+# ── Report initialization ───────────────────────────────────────────────
 init_report() {
     mkdir -p "$REPORT_DIR" 2>/dev/null || true
     REPORT_TXT="$REPORT_DIR/cis-audit-${TIMESTAMP}.txt"
@@ -104,15 +104,15 @@ init_report() {
     } > "$REPORT_TXT"
 }
 
-# ── 检查函数 ─────────────────────────────────────────────────
-# 用法: run_check <cis_id> <description> <level> <check_cmd...>
-# check_cmd 返回 0=PASS, 1=FAIL, 2=WARN, 3=SKIP
+# ── Check functions ─────────────────────────────────────────────────
+# Usage: run_check <cis_id> <description> <level> <check_cmd...>
+# check_cmd Back 0=PASS, 1=FAIL, 2=WARN, 3=SKIP
 run_check() {
     local cis_id="$1" desc="$2" level="$3"
     shift 3
     local result evidence
 
-    # 级别过滤: Level 2 检查在 Level 1 模式下跳过
+    # Level filter: Level 2 checks skipped in Level 1 mode
     if [ "$level" -gt "$CIS_LEVEL" ]; then
         result="SKIP"
         evidence="Level $level check, skipped in Level $CIS_LEVEL mode"
@@ -135,7 +135,7 @@ run_check() {
         SKIP) COUNT_SKIP=$((COUNT_SKIP + 1)) ;;
     esac
 
-    # 控制台输出
+    # Console output
     if [ "$QUIET" -eq 0 ]; then
         local color
         case "$result" in
@@ -147,14 +147,14 @@ run_check() {
         printf "  ${color}%-4s${C_RST} %s  %s\n" "$result" "$cis_id" "$desc"
     fi
 
-    # 文本报告
+    # Text report
     {
         echo ""
         echo "[$result] $cis_id ($level) $desc"
         echo "  Evidence: $evidence"
     } >> "$REPORT_TXT"
 
-    # JSON 累积
+    # JSON accumulation
     local json_entry
     # Escape: backslash, double-quote, newline, tab, carriage return
     local esc_desc esc_evidence
@@ -177,44 +177,44 @@ run_check() {
     fi
 }
 
-# ── 辅助检查函数 (返回 0=PASS, 1=FAIL, 2=WARN) ──────────────
+# ── HelpersCheck functions (Back 0=PASS, 1=FAIL, 2=WARN) ──────────────
 
-# 检查文件是否存在且权限正确
+# Check if file exists and permissions are correct
 check_file_perm() {
     local path="$1" expected_perm="$2"
     if [ ! -e "$path" ]; then
-        echo "文件不存在: $path"
+        echo "File does not exist: $path"
         return 2
     fi
     local actual
     actual=$(stat -c '%a' "$path" 2>/dev/null || stat -f '%Lp' "$path" 2>/dev/null)
     if [ "$actual" = "$expected_perm" ]; then
-        echo "权限 $actual"
+        echo "Permissions: $actual"
         return 0
     else
-        echo "期望 $expected_perm, 实际 $actual"
+        echo "Expected $expected_perm, actual $actual"
         return 1
     fi
 }
 
-# 检查 sysctl 值
+# Check sysctl value
 check_sysctl() {
     local key="$1" expected="$2"
     local actual
     actual=$(sysctl -n "$key" 2>/dev/null || echo "N/A")
     if [ "$actual" = "N/A" ]; then
-        echo "$key 不存在"
+        echo "$key Does not exist"
         return 2
     elif [ "$actual" = "$expected" ]; then
         echo "$key = $actual"
         return 0
     else
-        echo "$key = $actual (期望 $expected)"
+        echo "$key = $actual (Expected $expected)"
         return 1
     fi
 }
 
-# 检查某包是否安装
+# Check if package is installed
 check_pkg_installed() {
     local pkg="$1"
     if [ "$DISTRO_FAMILY" = "debian" ]; then
@@ -224,7 +224,7 @@ check_pkg_installed() {
     fi
 }
 
-# 检查服务状态
+# Check service status
 check_service_enabled() {
     local svc="$1" state="$2"  # state: enabled/disabled/masked
     local actual
@@ -233,7 +233,7 @@ check_service_enabled() {
         echo "$svc is $state"
         return 0
     else
-        echo "$svc is $actual (期望 $state)"
+        echo "$svc is $actual (Expected $state)"
         return 1
     fi
 }
@@ -246,7 +246,7 @@ check_service_active() {
         echo "$svc is $state"
         return 0
     else
-        echo "$svc is $actual (期望 $state)"
+        echo "$svc is $actual (Expected $state)"
         return 1
     fi
 }
@@ -277,7 +277,7 @@ section_1_initial_setup() {
         bash -c '[ "$DISTRO_FAMILY" = "rhel" ] && { rpm -q gpg-pubkey >/dev/null 2>&1 && echo "GPG keys installed" && return 0; } || echo "Debian family: apt uses signed repos" && return 0'
 
     run_check "1.2.2" "Ensure package manager repositories are configured" 1 \
-        bash -c '[ "$DISTRO_FAMILY" = "debian" ] && apt-cache policy 2>/dev/null | grep -q "http" && return 0 || { [ "$DISTRO_FAMILY" = "rhel" ] && yum repolist 2>/dev/null | grep -q "repolist" && return 0; } || echo "无法确认仓库配置" && return 2'
+        bash -c '[ "$DISTRO_FAMILY" = "debian" ] && apt-cache policy 2>/dev/null | grep -q "http" && return 0 || { [ "$DISTRO_FAMILY" = "rhel" ] && yum repolist 2>/dev/null | grep -q "repolist" && return 0; } || echo "Cannot verify repository config" && return 2'
 
     run_check "1.2.3" "Ensure gpgcheck is globally activated (RHEL)" 1 \
         bash -c '[ "$DISTRO_FAMILY" = "rhel" ] && { grep -q "gpgcheck=1" /etc/yum.conf 2>/dev/null && echo "gpgcheck=1" && return 0 || echo "gpgcheck not set" && return 1; } || echo "Debian: apt uses signed repos by default" && return 0'
@@ -490,13 +490,13 @@ section_5_access() {
         bash -c 'for f in /etc/ssh/ssh_host_*_key; do [ -f "$f" ] && { local p=$(stat -c "%a" "$f" 2>/dev/null || stat -f "%Lp" "$f"); [ "$p" -le 600 ] || echo "$f: $p" && return 1; }; done; echo "all host keys <= 600" && return 0'
 
     run_check "5.2.4" "Ensure SSH LogLevel is appropriate" 1 \
-        bash -c 'val=$(sshd -T 2>/dev/null | awk "/^loglevel /{print \$2}"); [ "$val" = "VERBOSE" ] || [ "$val" = "INFO" ] && echo "LogLevel=$val" && return 0 || echo "LogLevel=$val (期望 VERBOSE/INFO)" && return 1'
+        bash -c 'val=$(sshd -T 2>/dev/null | awk "/^loglevel /{print \$2}"); [ "$val" = "VERBOSE" ] || [ "$val" = "INFO" ] && echo "LogLevel=$val" && return 0 || echo "LogLevel=$val (Expected VERBOSE/INFO)" && return 1'
 
     run_check "5.2.5" "Ensure SSH X11 forwarding is disabled" 1 \
         bash -c 'val=$(sshd -T 2>/dev/null | awk "/^x11forwarding /{print \$2}"); [ "$val" = "no" ] && echo "X11Forwarding=no" && return 0 || echo "X11Forwarding=$val" && return 1'
 
     run_check "5.2.6" "Ensure SSH MaxAuthTries is set to 4 or less" 1 \
-        bash -c 'val=$(sshd -T 2>/dev/null | awk "/^maxauthtries /{print \$2}"); [ "$val" -le 4 ] 2>/dev/null && echo "MaxAuthTries=$val" && return 0 || echo "MaxAuthTries=$val (期望 <=4)" && return 1'
+        bash -c 'val=$(sshd -T 2>/dev/null | awk "/^maxauthtries /{print \$2}"); [ "$val" -le 4 ] 2>/dev/null && echo "MaxAuthTries=$val" && return 0 || echo "MaxAuthTries=$val (Expected <=4)" && return 1'
 
     run_check "5.2.7" "Ensure SSH IgnoreRhosts is enabled" 1 \
         bash -c 'val=$(sshd -T 2>/dev/null | awk "/^ignorerhosts /{print \$2}"); [ "$val" = "yes" ] && echo "IgnoreRhosts=yes" && return 0 || echo "IgnoreRhosts=$val" && return 1'
@@ -505,7 +505,7 @@ section_5_access() {
         bash -c 'val=$(sshd -T 2>/dev/null | awk "/^hostbasedauthentication /{print \$2}"); [ "$val" = "no" ] && echo "HostbasedAuthentication=no" && return 0 || echo "HostbasedAuthentication=$val" && return 1'
 
     run_check "5.2.9" "Ensure SSH PermitRootLogin is disabled" 1 \
-        bash -c 'val=$(sshd -T 2>/dev/null | awk "/^permitrootlogin /{print \$2}"); [ "$val" = "no" ] && echo "PermitRootLogin=no" && return 0 || echo "PermitRootLogin=$val (期望 no)" && return 1'
+        bash -c 'val=$(sshd -T 2>/dev/null | awk "/^permitrootlogin /{print \$2}"); [ "$val" = "no" ] && echo "PermitRootLogin=no" && return 0 || echo "PermitRootLogin=$val (Expected no)" && return 1'
 
     run_check "5.2.10" "Ensure SSH PermitEmptyPasswords is disabled" 1 \
         bash -c 'val=$(sshd -T 2>/dev/null | awk "/^permitemptypasswords /{print \$2}"); [ "$val" = "no" ] && echo "PermitEmptyPasswords=no" && return 0 || echo "PermitEmptyPasswords=$val" && return 1'
@@ -523,10 +523,10 @@ section_5_access() {
         bash -c 'val=$(sshd -T 2>/dev/null | awk "/^kexalgorithms /{print \$2}"); echo "$val" | grep -qi "diffie-hellman-group1-sha1" && echo "weak KEX present" && return 1 || echo "KEX ok" && return 0'
 
     run_check "5.2.15" "Ensure SSH ClientAliveInterval and ClientAliveCountMax are configured" 1 \
-        bash -c 'i=$(sshd -T 2>/dev/null | awk "/^clientaliveinterval /{print \$2}"); c=$(sshd -T 2>/dev/null | awk "/^clientalivecountmax /{print \$2}"); [ -n "$i" ] && [ "$i" -le 300 ] 2>/dev/null && [ "$c" -le 3 ] 2>/dev/null && echo "Interval=$i CountMax=$c" && return 0 || echo "Interval=$i CountMax=$c (期望 <=300, <=3)" && return 1'
+        bash -c 'i=$(sshd -T 2>/dev/null | awk "/^clientaliveinterval /{print \$2}"); c=$(sshd -T 2>/dev/null | awk "/^clientalivecountmax /{print \$2}"); [ -n "$i" ] && [ "$i" -le 300 ] 2>/dev/null && [ "$c" -le 3 ] 2>/dev/null && echo "Interval=$i CountMax=$c" && return 0 || echo "Interval=$i CountMax=$c (Expected <=300, <=3)" && return 1'
 
     run_check "5.2.16" "Ensure SSH LoginGraceTime is set to one minute or less" 1 \
-        bash -c 'val=$(sshd -T 2>/dev/null | awk "/^logingracetime /{print \$2}"); [ -n "$val" ] && [ "$val" -le 60 ] 2>/dev/null && echo "LoginGraceTime=$val" && return 0 || echo "LoginGraceTime=$val (期望 <=60)" && return 1'
+        bash -c 'val=$(sshd -T 2>/dev/null | awk "/^logingracetime /{print \$2}"); [ -n "$val" ] && [ "$val" -le 60 ] 2>/dev/null && echo "LoginGraceTime=$val" && return 0 || echo "LoginGraceTime=$val (Expected <=60)" && return 1'
 
     # 5.3 sudo
     run_check "5.3.1" "Ensure sudo is installed" 1 \
@@ -659,7 +659,7 @@ section_6_maintenance() {
         bash -c 'n=$(awk -F: "(\$3 >= 1000 && \$3 != 65534) { print \$6 }" /etc/passwd | xargs -I '{}' find '{}' -maxdepth 1 -name ".bash*" -exec grep -l "rhosts" {} \; 2>/dev/null | wc -l); [ "$n" -eq 0 ] && echo "no .bashrc .rhosts refs" && return 0 || echo "$n .bashrc with .rhosts refs" && return 1'
 }
 
-# ── 摘要输出 ─────────────────────────────────────────────────
+# ── Summary output ─────────────────────────────────────────────────
 print_summary() {
     local total=$TOTAL_CHECKS
     local pass_pct=0
@@ -682,7 +682,7 @@ print_summary() {
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 }
 
-# ── JSON 报告写入 ────────────────────────────────────────────
+# ── JSON report writing ────────────────────────────────────────────
 write_json_report() {
     JSON_RESULTS="$JSON_RESULTS]"
     cat > "$REPORT_JSON" <<EOF
@@ -711,7 +711,7 @@ write_json_report() {
 EOF
 }
 
-# ── 主流程 ───────────────────────────────────────────────────
+# ── Main flow ───────────────────────────────────────────────────
 main() {
     parse_args "$@"
     detect_distro

@@ -137,7 +137,7 @@ sudo ./scripts/zerotrust_setup.sh --acl
 From `secure-vps`, zero trust is accessible via:
 
 ```
-B · 安全加固 → b8 零信任网络 → WireGuard/Headscale 部署
+B · Security hardening → b8 Zero-trust network → WireGuard/Headscale deployment
 ```
 
 ## Related Tools

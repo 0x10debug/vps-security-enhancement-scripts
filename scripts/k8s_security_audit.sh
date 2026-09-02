@@ -1,27 +1,27 @@
 #!/bin/bash
 # ════════════════════════════════════════════════════════════
 #  k8s_security_audit.sh — CIS Kubernetes Benchmark Compliance Audit
-#  适用系统: 任何能访问 Kubernetes 集群的 Linux 主机
-#  运行身份: 普通用户 (需 kubeconfig 或 in-cluster service account)
-#  审计模式: 只读, 不修改任何 Kubernetes 资源或节点配置
-#  参考: CIS Kubernetes Benchmark v1.10.0 (covers K8s 1.8-1.31)
+#  Supported OS: Any Linux host with Kubernetes cluster access
+#  Run as: Regular user (requires kubeconfig or in-cluster service account)
+#  Audit mode: Read-only, no modifications to Kubernetes resources or node config
+#  Reference: CIS Kubernetes Benchmark v1.10.0 (covers K8s 1.8-1.31)
 #         aquasecurity/kube-bench (8115 stars)
-#  项目主页: https://github.com/0x10debug/vps-security-enhancement-scripts
+#  Project home: https://github.com/0x10debug/vps-security-enhancement-scripts
 # ════════════════════════════════════════════════════════════
 #
-# 用法:
-#   ./scripts/k8s_security_audit.sh                     # 自动探测环境并审计
-#   ./scripts/k8s_security_audit.sh --kubeconfig ~/.kube/config  # 指定 kubeconfig
-#   ./scripts/k8s_security_audit.sh --json              # 输出 JSON 报告路径
-#   ./scripts/k8s_security_audit.sh --quiet             # 只输出摘要
-#   ./scripts/k8s_security_audit.sh --section master    # 只审计 master 节点配置
-#   ./scripts/k8s_security_audit.sh --section worker    # 只审计 worker 节点配置
-#   ./scripts/k8s_security_audit.sh --section controlplane  # 只审计控制平面
-#   ./scripts/k8s_security_audit.sh --section policies  # 只审计 CIS 策略 (RBAC/PSA)
+# Usage:
+#   ./scripts/k8s_security_audit.sh                     # Auto-detect environment and audit
+#   ./scripts/k8s_security_audit.sh --kubeconfig ~/.kube/config  # Specify kubeconfig
+#   ./scripts/k8s_security_audit.sh --json              # Output JSON report path
+#   ./scripts/k8s_security_audit.sh --quiet             # Summary only
+#   ./scripts/k8s_security_audit.sh --section master    # Audit master node config only
+#   ./scripts/k8s_security_audit.sh --section worker    # Audit worker node config only
+#   ./scripts/k8s_security_audit.sh --section controlplane  # Audit control plane only
+#   ./scripts/k8s_security_audit.sh --section policies  # Audit CIS policies only (RBAC/PSA)
 #
-# 退出码:
-#   0 — 审计完成
-#   1 — 参数错误 / kubectl 不可用 / 无集群访问
+# Exit codes:
+#   0 — Audit complete
+#   1 — Parameter error / kubectl unavailable / no cluster access
 
 set -euo pipefail
 
@@ -49,7 +49,7 @@ C_WARN='\033[0;33m'
 C_INFO='\033[0;34m'
 C_RST='\033[0m'
 
-# ── 参数解析 ─────────────────────────────────────────────────
+# ── Parameter parsing ─────────────────────────────────────────────────
 parse_args() {
     while [ $# -gt 0 ]; do
         case "$1" in
@@ -58,12 +58,12 @@ parse_args() {
             --kubeconfig) KUBECONFIG_ARG="$2"; shift 2 ;;
             --section) SECTION_FILTER="$2"; shift 2 ;;
             -h|--help) sed -n '2,20p' "$0"; exit 0 ;;
-            *) echo "未知参数: $1"; exit 1 ;;
+            *) echo "Unknown parameter: $1"; exit 1 ;;
         esac
     done
 }
 
-# ── 环境探测 ─────────────────────────────────────────────────
+# ── Environment detection ─────────────────────────────────────────────────
 KUBECTL=""
 KUBECONFIG_PATH=""
 IS_MASTER=0
@@ -72,15 +72,15 @@ K8S_VERSION=""
 NODE_NAME=""
 
 detect_environment() {
-    # 查找 kubectl
+    # Find kubectl
     KUBECTL=$(command -v kubectl 2>/dev/null || true)
     if [ -z "$KUBECTL" ]; then
-        echo -e "${C_FAIL}kubectl 未安装或不在 PATH 中${C_RST}"
-        echo -e "${C_INFO}请安装 kubectl 或确认已加入 PATH${C_RST}"
+        echo -e "${C_FAIL}kubectl not installed or not in PATH${C_RST}"
+        echo -e "${C_INFO}Please install kubectl or verify it is in PATH${C_RST}"
         exit 1
     fi
 
-    # kubeconfig 解析
+    # kubeconfig parsing
     if [ -n "$KUBECONFIG_ARG" ]; then
         KUBECONFIG_PATH="$KUBECONFIG_ARG"
     elif [ -n "${KUBECONFIG:-}" ]; then
@@ -89,30 +89,30 @@ detect_environment() {
         KUBECONFIG_PATH="$HOME/.kube/config"
     fi
 
-    # 测试集群连通性
+    # Test cluster connectivity
     if ! KUBECONFIG="$KUBECONFIG_PATH" "$KUBECTL" cluster-info >/dev/null 2>&1; then
-        echo -e "${C_FAIL}无法连接 Kubernetes 集群${C_RST}"
-        echo -e "${C_INFO}请检查 kubeconfig 或集群状态${C_RST}"
+        echo -e "${C_FAIL}Cannot connect to Kubernetes cluster${C_RST}"
+        echo -e "${C_INFO}Please check kubeconfig or cluster status${C_RST}"
         exit 1
     fi
 
-    # 探测节点角色
+    # Detect node role
     NODE_NAME=$(KUBECONFIG="$KUBECONFIG_PATH" "$KUBECTL" get node -o jsonpath='{.items[0].metadata.name}' 2>/dev/null || hostname)
     local node_role
     node_role=$(KUBECONFIG="$KUBECONFIG_PATH" "$KUBECTL" get node "$NODE_NAME" -o jsonpath='{.metadata.labels.node-role\.kubernetes\.io/control-plane}' 2>/dev/null || true)
     if [ -n "$node_role" ]; then
         IS_MASTER=1
     fi
-    # 检查是否为 worker (有节点但无 control-plane label)
+    # Check if worker (has nodes but no control-plane label)
     if [ "$IS_MASTER" -eq 0 ]; then
         IS_WORKER=1
     fi
 
-    # K8s 版本
+    # K8s Version
     K8S_VERSION=$(KUBECONFIG="$KUBECONFIG_PATH" "$KUBECTL" version --short 2>/dev/null | grep -oE 'v[0-9]+\.[0-9]+\.[0-9]+' | head -1 || echo "unknown")
 }
 
-# ── 报告初始化 ───────────────────────────────────────────────
+# ── Report initialization ───────────────────────────────────────────────
 init_report() {
     if ! mkdir -p "$REPORT_DIR" 2>/dev/null; then
         REPORT_DIR="/tmp/k8s-audit"
@@ -134,12 +134,12 @@ init_report() {
     } > "$REPORT_TXT"
 }
 
-# ── kubectl 封装 ─────────────────────────────────────────────
+# ── kubectl wrapper ─────────────────────────────────────────────
 k() {
     KUBECONFIG="$KUBECONFIG_PATH" "$KUBECTL" "$@"
 }
 
-# ── 检查函数 ─────────────────────────────────────────────────
+# ── Check functions ─────────────────────────────────────────────────
 run_check() {
     local cis_id="$1" desc="$2"
     shift 2
@@ -188,10 +188,10 @@ run_check() {
     fi
 }
 
-# ── 辅助: 读取 kubelet 配置 ──────────────────────────────────
+# ── Helper: read kubelet config ──────────────────────────────────
 get_kubelet_config() {
     local key="$1"
-    # 尝试从 kubelet 配置文件读取
+    # Try reading from kubelet config file
     local config_file
     for config_file in /var/lib/kubelet/config.yaml /etc/kubernetes/kubelet/kubelet-config.yaml; do
         if [ -f "$config_file" ]; then
@@ -203,7 +203,7 @@ get_kubelet_config() {
 
 get_kubelet_flag() {
     local flag="$1"
-    # 从 kubelet 进程命令行读取
+    # Read from kubelet process command line
     local pid
     pid=$(pgrep -x kubelet 2>/dev/null | head -1 || true)
     if [ -n "$pid" ] && [ -f "/proc/$pid/cmdline" ]; then
@@ -252,32 +252,32 @@ get_etcd_flag() {
     return 1
 }
 
-# ── 文件权限检查 ─────────────────────────────────────────────
+# ── File permission check ─────────────────────────────────────────────
 check_file_perm() {
     local path="$1" expected_perm="$2"
     if [ ! -e "$path" ]; then
-        echo "文件不存在: $path"; return 2
+        echo "File does not exist: $path"; return 2
     fi
     local actual
     actual=$(stat -c '%a' "$path" 2>/dev/null || stat -f '%Lp' "$path" 2>/dev/null)
     if [ "$actual" = "$expected_perm" ]; then
-        echo "权限 $actual"; return 0
+        echo "Permissions: $actual"; return 0
     else
-        echo "期望 $expected_perm, 实际 $actual"; return 1
+        echo "Expected $expected_perm, actual $actual"; return 1
     fi
 }
 
 check_file_owner() {
     local path="$1" expected_owner="$2"
     if [ ! -e "$path" ]; then
-        echo "文件不存在: $path"; return 2
+        echo "File does not exist: $path"; return 2
     fi
     local actual
     actual=$(stat -c '%U:%G' "$path" 2>/dev/null || stat -f '%u:%g' "$path" 2>/dev/null)
     if [ "$actual" = "$expected_owner" ]; then
         echo "owner $actual"; return 0
     else
-        echo "期望 $expected_owner, 实际 $actual"; return 1
+        echo "Expected $expected_owner, actual $actual"; return 1
     fi
 }
 
@@ -285,7 +285,7 @@ check_file_owner() {
 section_control_plane() {
     if [ "$IS_MASTER" -ne 1 ] && [ "$IS_WORKER" -eq 1 ]; then
         if [ "$QUIET" -eq 0 ]; then
-            echo -e "${C_INFO}  跳过控制平面检查 (当前节点为纯 worker)${C_RST}"
+            echo -e "${C_INFO}  Skipping control plane check (current node is pure worker)${C_RST}"
         fi
         return
     fi
@@ -659,12 +659,12 @@ section_workload() {
         bash -c 'latest_images=$(k get pods --all-namespaces -o json 2>/dev/null | grep -c ":latest" || true); echo "$latest_images pods with :latest image"; [ "$latest_images" -eq 0 ] && return 0 || return 2'
 }
 
-# ── JSON 报告 ────────────────────────────────────────────────
+# ── JSON report ────────────────────────────────────────────────
 write_json_report() {
     echo "${JSON_RESULTS}]" > "$REPORT_JSON"
 }
 
-# ── 摘要 ─────────────────────────────────────────────────────
+# ── Summary ─────────────────────────────────────────────────────
 print_summary() {
     echo ""
     echo -e "${C_INFO}╔══════════════════════════════════════════╗${C_RST}"
@@ -682,13 +682,13 @@ print_summary() {
     printf "  ${C_INFO}SKIP${C_RST}: %d\n" "$COUNT_SKIP"
     printf "  Total: %d\n" "$TOTAL_CHECKS"
     echo ""
-    echo -e "报告: $REPORT_TXT"
+    echo -e "Report: $REPORT_TXT"
     if [ "$JSON_ONLY" -eq 1 ]; then
         echo -e "JSON: $REPORT_JSON"
     fi
 }
 
-# ── 主流程 ───────────────────────────────────────────────────
+# ── Main flow ───────────────────────────────────────────────────
 main() {
     parse_args "$@"
     detect_environment
@@ -730,7 +730,7 @@ main() {
             section_workload
             ;;
         *)
-            echo "未知 section: $SECTION_FILTER (可选: master/worker/policies/cluster/workload)"
+            echo "Unknown section: $SECTION_FILTER (Optional: master/worker/policies/cluster/workload)"
             exit 1
             ;;
     esac

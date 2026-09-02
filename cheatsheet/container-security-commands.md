@@ -108,7 +108,7 @@ iptables -t nat -L -n | grep DOCKER
 
 **Fix:** Take over Docker's iptables so UFW rules apply.
 ```bash
-# Reference: vps_secure.sh  →  d1  →  Docker  →  UFW 接管
+# Reference: vps_secure.sh  →  d1  →  Docker  →  UFW takeover
 # After fix, Docker no longer writes its own iptables nat rules;
 # you must expose ports via explicit UFW allow rules + --iptables=false.
 ```

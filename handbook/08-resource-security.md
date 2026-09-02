@@ -15,7 +15,7 @@ This chapter covers system resource assessment, BBR congestion control, swap con
 Before tuning anything, measure. Tuning without measurement is guessing.
 
 ```bash
-secure-vps  # d2 → 1 (实时资源仪表 / Real-time resource dashboard)
+secure-vps  # d2 → 1 (Real-time resource dashboard)
 # Shows: uptime, load average, CPU usage, memory, disk usage
 # in a compact dashboard format
 ```
@@ -70,7 +70,7 @@ BBR (Bottleneck Bandwidth and RTT) replaces the default CUBIC TCP congestion con
 ### Enable BBR
 
 ```bash
-secure-vps  # c2 → 1 (开启 BBR)
+secure-vps  # c2 → 1 (Enable BBR)
 ```
 
 The script:
@@ -122,7 +122,7 @@ Swap is virtual memory on disk. It's slower than RAM but prevents the OOM killer
 ### Create swap
 
 ```bash
-secure-vps  # c2 → 2 (新建 Swap)
+secure-vps  # c2 → 2 (Create swap)
 # Options: 512MB, 1GB (recommended), 2GB, 4GB, custom
 ```
 
@@ -176,7 +176,7 @@ sysctl vm.swappiness
 ### Remove swap
 
 ```bash
-secure-vps  # c2 → 3 (删除 Swap)
+secure-vps  # c2 → 3 (Delete swap)
 # Removes /swapfile, cleans fstab entry
 ```
 
@@ -237,7 +237,7 @@ If `%util` is consistently >80% and `await` >20ms:
 ### Benchmark disk performance
 
 ```bash
-secure-vps  # d2 → 2 (YABS / CPU/磁盘)
+secure-vps  # d2 → 2 (YABS / CPU/disk)
 # YABS runs Geekbench (CPU) and disk speed tests
 # Warning: YABS is heavy — not recommended for very low-spec VPS
 ```
@@ -461,7 +461,7 @@ YABS (Yet Another Bench Script) runs:
 ### Comprehensive benchmark
 
 ```bash
-secure-vps  # d2 → 6 (融合怪综合评测)
+secure-vps  # d2 → 6 (Comprehensive benchmark)
 # Runs a comprehensive test combining multiple benchmark scripts
 # Includes: CPU, disk, network, streaming, IP quality, route
 # Very long-running — use on a fresh server before deploying services

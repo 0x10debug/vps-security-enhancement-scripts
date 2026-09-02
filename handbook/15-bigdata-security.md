@@ -163,7 +163,7 @@ client_encryption_options:
 From `secure-vps`, big data security is accessible via:
 
 ```
-D · 安全运维 → d7 大数据安全 → SSL 证书生成 / 安全审计
+D · Security operations → d7 Big data security → SSL certificate generation / security audit
 ```
 
 ## Relationship to Other Tools

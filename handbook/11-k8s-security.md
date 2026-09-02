@@ -71,7 +71,7 @@ Each run produces two reports in `/var/log/k8s-audit/`:
 From `secure-vps`, the K8s audit is accessible via:
 
 ```
-D · 安全运维 → d1 容器安全 → K8s 安全审计
+D · Security operations → d1 Container security → K8s security audit
 ```
 
 This calls `scripts/k8s_security_audit.sh` and displays the summary.

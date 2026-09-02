@@ -1,63 +1,63 @@
-# 第 18 章：TLS 证书自动化
+# Chapter 18: TLS Certificate Automation
 
-> **场景**：你在一台 VPS 上跑了三个服务——一个博客、一个 API、一个 Grafana 仪表盘。每个都用不同的子域名，每个都需要 HTTPS。你不想每隔三个月手动续期证书，更不想因为证书过期导致服务中断被用户投诉。
+> **Scenario**: You run three services on a VPS — a blog, an API, and a Grafana dashboard. Each uses a different subdomain, and each needs HTTPS. You don't want to manually renew certificates every three months, and you definitely don't want service interruptions from expired certificates causing user complaints.
 
-## 为什么需要 TLS 自动化
+## Why TLS Automation Is Needed
 
-TLS 证书是 HTTPS 的基石。没有有效证书，浏览器会显示安全警告，API 客户端会拒绝连接，搜索引擎会降权。但证书管理是典型的"重要但不紧急"工作——直到过期那天才变成紧急。
+TLS certificates are the cornerstone of HTTPS. Without a valid certificate, browsers display security warnings, API clients refuse to connect, and search engines downgrade your ranking. But certificate management is a classic "important but not urgent" task — until the day it expires, then it becomes urgent.
 
-手动管理证书的问题：
+Problems with manual certificate management:
 
-1. **容易忘记续期**——Let's Encrypt 证书有效期 90 天，商业 CA 通常 1 年。人脑不擅长记住这种周期性任务。
-2. **续期需要停机**——传统方式续期需要重启 Web 服务器，如果没有自动化流程，要么手动停机，要么冒险热替换。
-3. **多域名管理混乱**——一台 VPS 上跑多个子域名时，每个域名单独管理很快变成噩梦。
-4. **故障不可见**——证书续期失败时没有告警，直到用户报告"你的网站打不开了"才知道。
+1. **Easy to forget renewal** — Let's Encrypt certificates are valid for 90 days, commercial CAs typically 1 year. The human brain is not good at remembering such periodic tasks.
+2. **Renewal requires downtime** — Traditional renewal requires restarting the web server. Without an automated process, you either stop manually or risk a hot swap.
+3. **Multi-domain management chaos** — When running multiple subdomains on one VPS, managing each domain separately quickly becomes a nightmare.
+4. **Failures are invisible** — When certificate renewal fails, there's no alert. You only find out when users report "your website is down."
 
-## 工具选型：acme.sh vs certbot
+## Tool Selection: acme.sh vs certbot
 
-| 维度 | acme.sh | certbot |
+| Dimension | acme.sh | certbot |
 |---|---|---|
-| 依赖 | 纯 shell，无依赖 | Python + 虚拟环境 |
-| 体积 | ~200KB | ~50MB（含依赖） |
-| DNS API 支持 | 150+ 提供商 | ~30 插件 |
-| 自动续期 | cron | systemd timer |
-| ECC 证书 | 原生支持 | 需要额外配置 |
-| 撤销/删除 | 内置 | 内置 |
-| 适用场景 | VPS 轻量环境 | 有 Python 环境的服务器 |
+| Dependencies | Pure shell, no dependencies | Python + virtual environment |
+| Size | ~200KB | ~50MB (including dependencies) |
+| DNS API support | 150+ providers | ~30 plugins |
+| Auto-renewal | cron | systemd timer |
+| ECC certificates | Native support | Requires extra configuration |
+| Revoke/delete | Built-in | Built-in |
+| Use case | Lightweight VPS environment | Servers with Python environment |
 
-**推荐**：VPS 场景下优先用 acme.sh——纯 shell 实现，无依赖，DNS API 覆盖最广（包括国内 DNS 提供商）。
+**Recommendation**: For VPS scenarios, prefer acme.sh — pure shell implementation, no dependencies, and the widest DNS API coverage (including domestic DNS providers).
 
-## 签发策略
+## Issuance Strategy
 
 ### DNS-01 vs HTTP-01
 
-| 验证方式 | 适用场景 | 优势 | 限制 |
+| Verification method | Use case | Advantages | Limitations |
 |---|---|---|---|
-| DNS-01 | 通配符证书、内网服务、80 端口被占用 | 不需要开放 80 端口，支持通配符 | 需要 DNS API 凭据 |
-| HTTP-01 | 单域名、简单部署 | 零配置 | 80 端口必须可用 |
+| DNS-01 | Wildcard certificates, internal services, port 80 occupied | No need to expose port 80, supports wildcards | Requires DNS API credentials |
+| HTTP-01 | Single domain, simple deployment | Zero configuration | Port 80 must be available |
 
-**决策树**：
+**Decision tree**:
 
 ```
-需要通配符证书 (*.example.com)?
-├── 是 → DNS-01（唯一选择）
-└── 否
-    ├── 80 端口可用且不想配置 DNS API → HTTP-01 (standalone)
-    └── 80 端口被占用或有 DNS API 凭据 → DNS-01
+Need wildcard certificate (*.example.com)?
+├── Yes → DNS-01 (only option)
+└── No
+    ├── Port 80 available and don't want to configure DNS API → HTTP-01 (standalone)
+    └── Port 80 occupied or have DNS API credentials → DNS-01
 ```
 
-### 密钥类型
+### Key Types
 
-| 类型 | 推荐场景 | 性能 | 兼容性 |
+| Type | Recommended scenario | Performance | Compatibility |
 |---|---|---|---|
-| EC-256 | 通用推荐 | 最快 | 99% 客户端支持 |
-| EC-384 | 高安全需求 | 快 | 99% 客户端支持 |
-| RSA-2048 | 旧客户端兼容 | 中 | 100% |
-| RSA-4096 | 最高 RSA 安全 | 慢 | 100% |
+| EC-256 | General recommendation | Fastest | 99% client support |
+| EC-384 | High security requirements | Fast | 99% client support |
+| RSA-2048 | Legacy client compatibility | Medium | 100% |
+| RSA-4096 | Highest RSA security | Slow | 100% |
 
-**推荐**：EC-256。除非有明确的旧客户端兼容需求，否则不需要 RSA。
+**Recommendation**: EC-256. Unless you have explicit legacy client compatibility requirements, RSA is unnecessary.
 
-## 部署到反向代理
+## Deploying to Reverse Proxy
 
 ### Nginx
 
@@ -69,12 +69,12 @@ server {
     ssl_certificate     /etc/nginx/ssl/example.com/fullchain.cer;
     ssl_certificate_key /etc/nginx/ssl/example.com/example.com.key;
 
-    # 只启用 TLS 1.2 和 1.3
+    # Only enable TLS 1.2 and 1.3
     ssl_protocols TLSv1.2 TLSv1.3;
     ssl_ciphers ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256;
     ssl_prefer_server_ciphers off;
 
-    # 会话缓存
+    # Session cache
     ssl_session_cache shared:SSL:10m;
     ssl_session_timeout 1d;
     ssl_session_tickets off;
@@ -88,7 +88,7 @@ server {
 }
 ```
 
-acme.sh 自动部署 hook：
+acme.sh auto-deploy hook:
 ```bash
 acme.sh --install-cert -d example.com \
     --fullchain-file /etc/nginx/ssl/example.com/fullchain.cer \
@@ -98,7 +98,7 @@ acme.sh --install-cert -d example.com \
 
 ### Caddy
 
-Caddy 内置自动 TLS 管理，通常不需要 acme.sh。但如果需要手动管理证书（例如使用内部 CA）：
+Caddy has built-in automatic TLS management and usually doesn't need acme.sh. But if you need manual certificate management (e.g., using an internal CA):
 
 ```caddyfile
 example.com {
@@ -111,7 +111,7 @@ example.com {
 
 ### HAProxy
 
-HAProxy 需要将证书和私钥合并为一个 PEM 文件：
+HAProxy requires merging the certificate and private key into a single PEM file:
 
 ```bash
 cat fullchain.cer example.com.key > example.com-combined.pem
@@ -125,148 +125,148 @@ frontend https
     default_backend backend
 ```
 
-## 自动续期
+## Auto-Renewal
 
-acme.sh 安装后自动添加 cron 任务：
+acme.sh automatically adds a cron task after installation:
 
 ```cron
-# 每天凌晨检查并续期即将过期的证书
+# Check and renew expiring certificates daily at midnight
 0 0 * * * /root/.acme.sh/acme.sh --cron --home /root/.acme.sh
 ```
 
-### 验证自动续期是否工作
+### Verifying Auto-Renewal Works
 
 ```bash
-# 查看 cron 任务
+# View cron tasks
 crontab -l | grep acme
 
-# 手动触发续期检查
+# Manually trigger renewal check
 acme.sh --cron
 
-# 查看续期日志
+# View renewal logs
 tail -20 /root/.acme.sh/acme.sh.log
 ```
 
-### 续期失败排查
+### Renewal Failure Troubleshooting
 
-| 症状 | 可能原因 | 解决方案 |
+| Symptom | Possible cause | Solution |
 |---|---|---|
-| DNS 验证失败 | DNS API 凭据过期 | 更新环境变量，重新运行 |
-| HTTP 验证失败 | 80 端口被占用 | 停止占用 80 端口的服务，或切换到 DNS-01 |
-| 续期成功但服务没更新 | reloadcmd 未配置 | 添加 --reloadcmd 参数 |
-| 证书目录不存在 | 路径变更 | 检查 --fullchain-file --key-file 路径 |
+| DNS verification failed | DNS API credentials expired | Update environment variables, re-run |
+| HTTP verification failed | Port 80 occupied | Stop the service using port 80, or switch to DNS-01 |
+| Renewal succeeded but service not updated | reloadcmd not configured | Add --reloadcmd parameter |
+| Certificate directory doesn't exist | Path changed | Check --fullchain-file --key-file paths |
 
-## 证书监控
+## Certificate Monitoring
 
-### 自动监控脚本
+### Automated Monitoring Script
 
-本项目的 `tls_lifecycle.sh --monitor` 会扫描所有证书并报告过期状态：
+This project's `tls_lifecycle.sh --monitor` scans all certificates and reports expiry status:
 
 ```bash
-# 手动检查
+# Manual check
 sudo ./scripts/tls_lifecycle.sh --monitor
 
-# 生成 cron 监控脚本
+# Generate cron monitoring script
 sudo ./scripts/tls_lifecycle.sh --monitor --output ./tls-configs
-# 然后: crontab -e
+# Then: crontab -e
 # 0 8 * * * /path/to/tls-monitor-cron.sh
 ```
 
-### 监控告警级别
+### Monitoring Alert Levels
 
-| 级别 | 剩余天数 | 颜色 | 动作 |
+| Level | Days remaining | Color | Action |
 |---|---|---|---|
-| OK | > 30 天 | 绿色 | 无需操作 |
-| WARNING | 15-30 天 | 黄色 | 检查自动续期是否正常 |
-| CRITICAL | < 15 天 | 红色 | 立即手动续期 |
-| EXPIRED | < 0 天 | 红色 | 证书已过期，服务可能中断 |
+| OK | > 30 days | Green | No action needed |
+| WARNING | 15-30 days | Yellow | Check if auto-renewal is working |
+| CRITICAL | < 15 days | Red | Manually renew immediately |
+| EXPIRED | < 0 days | Red | Certificate expired, service may be interrupted |
 
-## TLS 审计
+## TLS Audit
 
-`tls_lifecycle.sh --audit` 执行 13 项只读检查：
+`tls_lifecycle.sh --audit` performs 13 read-only checks:
 
-| 检查 ID | 检查内容 |
+| Check ID | Check content |
 |---|---|
-| TLS-001 | acme.sh 已安装 |
-| TLS-002 | acme.sh cron 自动续期已配置 |
-| TLS-003 | acme.sh 默认 CA 已设置 |
-| TLS-004 | 已管理证书数量 |
-| TLS-005 | 证书未过期 |
-| TLS-006 | 证书密钥强度 (EC-256+ 或 RSA-2048+) |
-| TLS-007 | Nginx 启用 TLS 1.3 |
-| TLS-008 | Nginx 禁用 TLS 1.0/1.1 |
-| TLS-009 | Caddy 自动 TLS 管理 |
-| TLS-010 | HSTS 已配置 |
-| TLS-011 | acme.sh cron 自动续期已配置 |
-| TLS-012 | certbot 自动续期 timer |
-| TLS-013 | OCSP Stapling 已配置 |
+| TLS-001 | acme.sh installed |
+| TLS-002 | acme.sh cron auto-renewal configured |
+| TLS-003 | acme.sh default CA set |
+| TLS-004 | Number of managed certificates |
+| TLS-005 | Certificate not expired |
+| TLS-006 | Certificate key strength (EC-256+ or RSA-2048+) |
+| TLS-007 | Nginx enables TLS 1.3 |
+| TLS-008 | Nginx disables TLS 1.0/1.1 |
+| TLS-009 | Caddy automatic TLS management |
+| TLS-010 | HSTS configured |
+| TLS-011 | acme.sh cron auto-renewal configured |
+| TLS-012 | certbot auto-renewal timer |
+| TLS-013 | OCSP Stapling configured |
 
-## 常见问题
+## FAQ
 
-### Q: 通配符证书怎么签发？
+### Q: How to issue a wildcard certificate?
 
 ```bash
 acme.sh --issue -d *.example.com -d example.com --dns cloudflare -k ec-256
 ```
 
-需要 DNS-01 验证。注意通配符证书覆盖 `*.example.com` 但不覆盖 `example.com` 本身，需要同时添加 `-d example.com`。
+Requires DNS-01 verification. Note that wildcard certificates cover `*.example.com` but not `example.com` itself — you need to add `-d example.com` separately.
 
-### Q: 内网服务怎么用 Let's Encrypt 证书？
+### Q: How to use Let's Encrypt certificates for internal services?
 
-内网服务无法通过 HTTP-01 验证（外部无法访问内网 80 端口）。使用 DNS-01 验证——只需要 DNS 记录指向公网 IP，不需要服务本身被公网访问。
+Internal services cannot pass HTTP-01 verification (external access to internal port 80 is not possible). Use DNS-01 verification — you only need the DNS record to point to a public IP; the service itself doesn't need to be publicly accessible.
 
-### Q: 证书签发频率限制？
+### Q: Certificate issuance rate limits?
 
-Let's Encrypt 限制：
-- 每个注册域名每周 50 个证书
-- 每个证书最多 100 个域名
-- 重复证书每月 5 个
-- 失败重试每小时 5 次
+Let's Encrypt limits:
+- 50 certificates per registered domain per week
+- Maximum 100 domains per certificate
+- 5 duplicate certificates per month
+- 5 failed retries per hour
 
-正常使用不会触发限制。测试时使用 `--staging` 环境避免消耗配额。
+Normal usage won't trigger these limits. Use the `--staging` environment during testing to avoid consuming quota.
 
-### Q: 如何迁移到新服务器？
+### Q: How to migrate to a new server?
 
 ```bash
-# 旧服务器: 导出
-acme.sh --info -d example.com  # 查看配置
+# Old server: export
+acme.sh --info -d example.com  # View config
 cp -r /root/.acme.sh/ /backup/
 
-# 新服务器: 导入
+# New server: import
 cp -r /backup/.acme.sh/ /root/
-acme.sh --renew -d example.com --force  # 强制续期以验证新服务器
+acme.sh --renew -d example.com --force  # Force renewal to verify new server
 ```
 
-## 与其他工具的协作
+## Collaboration with Other Tools
 
-| 工具 | 协作方式 |
+| Tool | Collaboration method |
 |---|---|
-| network-toolkit | Caddy/Nginx/HAProxy 反代模板配合 TLS 部署 |
-| monitor-stack | 证书过期告警集成到监控体系 |
-| waf_setup.sh | WAF 需要 TLS 终结，TLS 证书是 WAF 部署的前置条件 |
-| zerotrust_setup.sh | 零信任网络中控制面需要 TLS |
+| network-toolkit | Caddy/Nginx/HAProxy reverse proxy templates work with TLS deployment |
+| monitor-stack | Certificate expiry alerts integrated into monitoring system |
+| waf_setup.sh | WAF requires TLS termination; TLS certificates are a prerequisite for WAF deployment |
+| zerotrust_setup.sh | Zero-trust network control plane requires TLS |
 
-## 速查
+## Quick Reference
 
 ```bash
-# 安装
+# Install
 sudo ./scripts/tls_lifecycle.sh --install
 
-# 签发 (DNS 验证)
+# Issue (DNS verification)
 sudo ./scripts/tls_lifecycle.sh --issue --domain example.com --dns cloudflare
 
-# 签发 (standalone)
+# Issue (standalone)
 sudo ./scripts/tls_lifecycle.sh --issue --domain example.com --standalone
 
-# 部署到 Nginx
+# Deploy to Nginx
 sudo ./scripts/tls_lifecycle.sh --deploy --domain example.com --proxy nginx
 
-# 续期
+# Renew
 sudo ./scripts/tls_lifecycle.sh --renew
 
-# 监控
+# Monitor
 sudo ./scripts/tls_lifecycle.sh --monitor
 
-# 审计
+# Audit
 sudo ./scripts/tls_lifecycle.sh --audit
 ```

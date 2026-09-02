@@ -38,7 +38,7 @@ sshd -T | grep -E '^port|^passwordauthentication|^permitrootlogin'
 # permitrootlogin yes        ← root can login with password
 
 # Recent failed login attempts (brute-force evidence):
-secure-vps  # c1 → 7 (登录轨迹 / Login Trail)
+secure-vps  # c1 → 7 (Login Trail)
 # Shows last 15 failed attempts from /var/log/btmp
 ```
 
@@ -79,7 +79,7 @@ iptables -L -n              # raw view, always available
 The single most impactful security change: switch to key-only authentication.
 
 ```bash
-secure-vps  # b1 → 2 (导入 GitHub 公钥并关闭密码登录)
+secure-vps  # b1 → 2 (Import GitHub public key and disable password login)
 # Enter your GitHub username: yourname
 # Pulls https://github.com/yourname.keys into ~/.ssh/authorized_keys
 # Then asks: disable password login now? (y/N)
@@ -110,7 +110,7 @@ sshd -t && systemctl restart sshd
 ### Step 2: Apply the SSH baseline parameter pack
 
 ```bash
-secure-vps  # b1 → 3 (SSH 基线参数包)
+secure-vps  # b1 → 3 (SSH baseline parameter pack)
 ```
 
 This applies anti-brute-force parameters:
@@ -134,7 +134,7 @@ These are conservative — they don't break normal SSH usage but eliminate commo
 Moving off port 22 eliminates ~90% of automated brute-force traffic (bots scan port 22 by default). It's not real security (a targeted scan finds any port), but it dramatically reduces log noise and fail2ban load.
 
 ```bash
-secure-vps  # b1 → 4 (更换 SSH 端口)
+secure-vps  # b1 → 4 (Change SSH port)
 # Recommended: 20000-60000 (avoid well-known ports)
 # Enter new port: 50022
 ```
@@ -158,7 +158,7 @@ ssh -p 50022 root@203.0.113.10
 ### Step 4: Lock root password login (keep key login)
 
 ```bash
-secure-vps  # b1 → 5 (封禁 root 密码登录)
+secure-vps  # b1 → 5 (Ban root password login)
 ```
 
 Sets `PermitRootLogin prohibit-password` — root can still login with a key, but not with a password. This is the recommended balance: you keep root access for emergencies but eliminate password-based root attacks. The script checks that root actually has authorized keys before applying, and warns if not (to prevent accidental self-lockout).
@@ -166,7 +166,7 @@ Sets `PermitRootLogin prohibit-password` — root can still login with a key, bu
 ### Step 5: Restrict login to specific users (AllowUsers)
 
 ```bash
-secure-vps  # b1 → 6 (登录白名单 / AllowUsers)
+secure-vps  # b1 → 6 (Login allowlist / AllowUsers)
 # Enter allowed users: deploy ubuntu
 ```
 
@@ -177,7 +177,7 @@ Only the listed users can SSH in. All other accounts (system accounts, service a
 ### Deploy and configure
 
 ```bash
-secure-vps  # b2 → 1 (初始化并启用)
+secure-vps  # b2 → 1 (Initialize and enable)
 ```
 
 This installs UFW (Debian/Ubuntu) or firewalld (RHEL family), then allows:
@@ -188,7 +188,7 @@ This installs UFW (Debian/Ubuntu) or firewalld (RHEL family), then allows:
 Default policy is **deny incoming, allow outgoing** — the correct baseline. You then open additional ports as needed:
 
 ```bash
-secure-vps  # b2 → 3 (放行自定义端口)
+secure-vps  # b2 → 3 (Allow custom port)
 # Enter port: 8080
 
 # Or manually:
@@ -199,7 +199,7 @@ ufw reload
 ### Check rules
 
 ```bash
-secure-vps  # b2 → 2 (查看状态与规则)
+secure-vps  # b2 → 2 (View status and rules)
 
 # Manual:
 ufw status numbered
@@ -216,7 +216,7 @@ ufw status numbered
 ### Deploy
 
 ```bash
-secure-vps  # b3 → 1 (部署防护)
+secure-vps  # b3 → 1 (Deploy protection)
 ```
 
 Creates `/etc/fail2ban/jail.local` with:
@@ -259,10 +259,10 @@ systemctl restart fail2ban
 ### Monitor
 
 ```bash
-secure-vps  # b3 → 2 (查看状态与封禁名单)
+secure-vps  # b3 → 2 (View status and ban list)
 # Shows fail2ban-client status sshd: currently banned IPs, total banned
 
-secure-vps  # b3 → 3 (查看拦截日志)
+secure-vps  # b3 → 3 (View block logs)
 # Tails last 15 lines of /var/log/fail2ban.log
 ```
 
@@ -271,7 +271,7 @@ secure-vps  # b3 → 3 (查看拦截日志)
 ## Fix: Kernel Hardening
 
 ```bash
-secure-vps  # b4 → 2 (内核参数加固)
+secure-vps  # b4 → 2 (Kernel parameter hardening)
 ```
 
 Writes `/etc/sysctl.d/99-secure-vps-kernel.conf` with CIS-baseline parameters adapted for VPS:
@@ -312,7 +312,7 @@ fs.suid_dumpable = 0
 To undo (if something breaks):
 
 ```bash
-secure-vps  # b4 → 3 (撤销内核加固)
+secure-vps  # b4 → 3 (Undo kernel hardening)
 # Removes the config file and reloads sysctl
 ```
 
@@ -325,7 +325,7 @@ This is the most commonly missed security hole on Docker+UFW servers. See Chapte
 **The fix**:
 
 ```bash
-secure-vps  # d1 → 1 → 3 (Docker 引擎 → UFW 接管)
+secure-vps  # d1 → 1 → 3 (Docker engine → UFW takeover)
 ```
 
 This sets `"iptables": false` in `/etc/docker/daemon.json` and injects a NAT rule for the docker0 bridge into `/etc/ufw/before.rules`. After this, all container ports are controlled by UFW — you must explicitly `ufw allow <port>` for each container you want public.
@@ -337,7 +337,7 @@ This sets `"iptables": false` in `/etc/docker/daemon.json` and injects a NAT rul
 ## Fix: Password Policy
 
 ```bash
-secure-vps  # b4 → 4 (密码强度策略)
+secure-vps  # b4 → 4 (Password strength policy)
 ```
 
 Installs `libpam-pwquality` (Debian/Ubuntu) or `libpwquality` (RHEL) and writes `/etc/security/pwquality.conf`:
@@ -358,7 +358,7 @@ This only affects passwords set AFTER the policy is applied — existing passwor
 ## Fix: Sudo Audit
 
 ```bash
-secure-vps  # b4 → 5 (sudo 审计)
+secure-vps  # b4 → 5 (sudo audit)
 ```
 
 Creates `/etc/sudoers.d/95-secure-vps-audit`:
@@ -381,7 +381,7 @@ getent group sudo wheel  # who has sudo rights
 ## Fix: Attack Surface Reduction
 
 ```bash
-secure-vps  # b4 → 10 (收缩攻击面)
+secure-vps  # b4 → 10 (Reduce attack surface)
 ```
 
 Disables unnecessary services that ship enabled on minimal installs:
