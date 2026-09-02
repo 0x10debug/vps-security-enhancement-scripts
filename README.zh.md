@@ -1,6 +1,6 @@
 # VPS 安全增强脚本集 — 从首次登录到应急响应的全链路加固
 
-> **测试报告**：本版本通过了完整的[航空工业级测试](TEST-REPORT-v4.0.0.md)（126 项测试，Docker Ubuntu 22.04 环境，修复 3 个 bug 后通过率 100%）。详见[测试报告全文](TEST-REPORT-v4.0.0.md)。
+> **测试报告**：本版本通过了完整的[航空工业级测试](TEST-REPORT-v4.0.0.md)（126 项测试，Docker Ubuntu 22.04 环境，修复 3 个 bug 后通过率 100%）。测试报告以英文撰写，详见[测试报告全文](TEST-REPORT-v4.0.0.md)。
 
 > **更新日志（2026-09-02）**：v4.0.0 全面测试中发现并修复 3 个 bug：
 > - `bigdata_security_audit.sh`：移除未使用的 `SECTION_FILTER` 变量（SC2034）
