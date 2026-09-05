@@ -815,7 +815,7 @@ sys_timezone() {
         echo -e "${C_FAIL}Setting failed, please verify timezone name is valid.${C_RST}"
         wait_key; return
     fi
-    echo -e "${C_OK}Timezone switched to $tz, current time $(date '+%Y-%m-%d %H:%M:%S')。${C_RST}"
+    echo -e "${C_OK}Timezone switched to $tz, current time $(date '+%Y-%m-%d %H:%M:%S').${C_RST}"
     wait_key
 }
 

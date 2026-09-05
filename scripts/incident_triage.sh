@@ -608,7 +608,7 @@ do_collect() {
     echo -e "  Archive: ${C_INFO}$archive${C_RST}"
     echo -e "  Manifest: ${C_INFO}$manifest${C_RST}"
     echo -e "  Verify: ${C_INFO}$OUTPUT_DIR/sha256sums.txt${C_RST}"
-    echo -e "${C_WARN}Copy archive to offline/trusted storage before analysis。${C_RST}"
+    echo -e "${C_WARN}Copy archive to offline/trusted storage before analysis.${C_RST}"
 }
 
 # ── Quick overview ─────────────────────────────────────────────────
@@ -965,7 +965,7 @@ do_analyze() {
         echo -e "${C_OK}No obvious suspicious indicators found${C_RST}"
     else
         echo ""
-        echo -e "${C_WARN}Total $suspects suspicious indicators, please manually review related files。${C_RST}"
+        echo -e "${C_WARN}Total $suspects suspicious indicators, please manually review related files.${C_RST}"
     fi
     echo ""
     echo -e "${C_INFO}Artifact directory: $workdir${C_RST}"

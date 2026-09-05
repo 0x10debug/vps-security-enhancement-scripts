@@ -400,7 +400,7 @@ deploy_iptables_bouncer() {
 
     if cscli bouncers list -o raw 2>/dev/null | grep -q "iptables-bouncer"; then
         echo -e "${C_INFO}iptables bouncer Installed${C_RST}"
-        if ask_yes "Reinstall/upgrade？"; then
+        if ask_yes "Reinstall/upgrade?"; then
             cscli bouncers delete iptables-bouncer 2>/dev/null || true
         else
             return 0
@@ -433,14 +433,14 @@ deploy_nginx_bouncer() {
 
     if ! check_cmd nginx; then
         echo -e "${C_WARN}nginx not detected, please install Nginx first${C_RST}"
-        if ! ask_yes "Continue installing bouncer (configure Nginx manually later)？"; then
+        if ! ask_yes "Continue installing bouncer (configure Nginx manually later)?"; then
             return 0
         fi
     fi
 
     if cscli bouncers list -o raw 2>/dev/null | grep -q "nginx-bouncer"; then
         echo -e "${C_INFO}nginx bouncer Installed${C_RST}"
-        if ask_yes "Reinstall/upgrade？"; then
+        if ask_yes "Reinstall/upgrade?"; then
             cscli bouncers delete nginx-bouncer 2>/dev/null || true
         else
             return 0
@@ -473,7 +473,7 @@ deploy_cloudflare_bouncer() {
 
     if cscli bouncers list -o raw 2>/dev/null | grep -q "cloudflare-bouncer"; then
         echo -e "${C_INFO}cloudflare bouncer Installed${C_RST}"
-        if ask_yes "Reinstall/upgrade？"; then
+        if ask_yes "Reinstall/upgrade?"; then
             cscli bouncers delete cloudflare-bouncer 2>/dev/null || true
         else
             return 0
@@ -877,7 +877,7 @@ uninstall_crowdsec() {
     fi
 
     echo -e "${C_FAIL}Warning: This will remove CrowdSec and all block decisions and config${C_RST}"
-    if ! ask_yes "Confirm uninstall？"; then
+    if ! ask_yes "Confirm uninstall?"; then
         return 0
     fi
     if ! ask_yes "Confirm again? This operation is irreversible"; then
