@@ -1,0 +1,11 @@
+# Gitleaks configuration for vps-security-enhancement-scripts.
+# Extends the default rule set and only narrows documentation placeholders.
+
+[extend]
+useDefault = true
+
+[allowlist]
+  description = "Handbook 'wrong example' placeholder API keys (illustrative documentation strings, not real secrets)"
+  regexes = [
+    '''sk-1234567890''',
+  ]

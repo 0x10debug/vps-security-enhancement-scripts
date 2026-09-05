@@ -7,6 +7,8 @@
 > - `stig_compliance_check.sh`: fixed `printf %d` receiving dual output from `grep -c || echo 0` (invalid number error in severity breakdown)
 > - `cis_benchmark_audit.sh`: fixed JSON report invalid due to unescaped control characters (newline/tab/CR) in `evidence` and `desc` fields
 
+[![CI](https://github.com/0x10debug/vps-security-enhancement-scripts/actions/workflows/ci.yml/badge.svg)](https://github.com/0x10debug/vps-security-enhancement-scripts/actions/workflows/ci.yml)
+
 A security-first interactive bash script for VPS hardening, with a scenario-driven handbook and cheatsheets included. One script, zero dependencies, one command to start — plus a real handbook that tells you *why*, not just *how*.
 
 > This is a **living repo**: the script and handbook expand by security direction over time. The current release ships a 3200-line interactive script + 20-chapter handbook + 4 cheatsheets. Future iterations add more depth per layer.

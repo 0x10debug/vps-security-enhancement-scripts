@@ -1,0 +1,67 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  bash-syntax:
+    name: bash -n syntax check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: bash -n all shell scripts
+        run: |
+          find . -name '*.sh' -not -path './.git/*' -print0 | xargs -0 -n1 bash -n
+          echo "bash -n: all scripts pass"
+
+  shellcheck:
+    name: shellcheck (warning gate)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run shellcheck gate
+        run: |
+          shellcheck --version
+          find . -name '*.sh' -not -path './.git/*' -print0 | xargs -0 -n1 shellcheck -S warning
+          echo "shellcheck gate: no error or warning level findings"
+
+      - name: Full shellcheck report (informational)
+        run: |
+          find . -name '*.sh' -not -path './.git/*' -print0 | xargs -0 -n1 shellcheck -S style || true
+          echo "Full report above is informational; the strict style gate lands with the shellcheck-zero iteration"
+
+  secret-scan:
+    name: gitleaks secret scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  content-policy:
+    name: no-Chinese content policy
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Scan for CJK characters and fullwidth punctuation
+        run: |
+          if grep -rIPn '[\x{3000}-\x{303F}\x{3400}-\x{4DBF}\x{4E00}-\x{9FFF}\x{F900}-\x{FAFF}\x{FE30}-\x{FE4F}\x{FF00}-\x{FFEF}]' --exclude-dir=.git .; then
+            echo "::error::Chinese characters or fullwidth punctuation found - no-Chinese policy violation"
+            exit 1
+          fi
+          echo "no-Chinese policy: clean"
