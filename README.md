@@ -143,6 +143,13 @@ Both `vps_security_enhance.sh` and `vps-bootstrap` cover SSH/firewall/Fail2Ban/k
 
 Benchmark and detection capabilities use: [YABS](https://github.com/masonr/yabs) · [bench.sh](https://bench.sh) · [NextTrace](https://github.com/nxtrace/NTrace-core) · [Fusion Monster](https://github.com/spiritLHLS/ecs) · [IPQuality](https://github.com/xykt/IPQuality) · [Lynis](https://cisofy.com/lynis/) · [Endlessh](https://github.com/skeeto/endlessh). Intrusion detection integrates [CrowdSec](https://github.com/crowdsecurity/crowdsec). App deployment uses [Docker](https://docker.com) and [1Panel](https://1panel.cn) official scripts.
 
+## Community
+
+- [Contributing](CONTRIBUTING.md) — how to report bugs, propose scripts or handbook chapters, and what CI requires
+- [Code of Conduct](CODE_OF_CONDUCT.md) — Contributor Covenant v2.1
+- [Issues](https://github.com/0x10debug/vps-security-enhancement-scripts/issues) — bug reports and feature requests (templates provided)
+- [Pull Requests](https://github.com/0x10debug/vps-security-enhancement-scripts/pulls) — PR checklist mirrors the CI gates (bash -n, strict shellcheck, gitleaks, no-Chinese policy)
+
 ## License
 
 [MIT](LICENSE) © 2026 0x10debug
