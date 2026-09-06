@@ -319,9 +319,11 @@ section_control_plane() {
     run_check "1.1.8" "Ensure etcd pod specification file ownership is root:root" \
         bash -c 'check_file_owner /etc/kubernetes/manifests/etcd.yaml root:root'
 
+# shellcheck disable=SC2016 # inner-shell expansion
     run_check "1.1.9" "Ensure Container Network Interface file permissions are 600 or more restrictive" \
         bash -c 'for f in /etc/cni/net.d/*.conf*; do [ -f "$f" ] && check_file_perm "$f" 600 && return 0; done; echo "no CNI config found"; return 2'
 
+# shellcheck disable=SC2016 # inner-shell expansion
     run_check "1.1.10" "Ensure Container Network Interface file ownership is root:root" \
         bash -c 'for f in /etc/cni/net.d/*.conf*; do [ -f "$f" ] && check_file_owner "$f" root:root && return 0; done; echo "no CNI config found"; return 2'
 
@@ -352,108 +354,139 @@ section_control_plane() {
     run_check "1.1.19" "Ensure Kubernetes PKI directory and file ownership is root:root" \
         bash -c 'check_file_owner /etc/kubernetes/pki root:root'
 
+# shellcheck disable=SC2016 # inner-shell expansion
     run_check "1.1.20" "Ensure Kubernetes PKI key file permissions are 600" \
         bash -c 'for f in /etc/kubernetes/pki/*.key; do [ -f "$f" ] && check_file_perm "$f" 600 && return 0; done; echo "no key files found"; return 2'
 
     # 1.2 API Server
     echo -e "  ${C_INFO}── 1.2 API Server ──${C_RST}"
 
+# shellcheck disable=SC2016 # inner-shell expansion
     run_check "1.2.1" "Ensure --anonymous-auth is set to false" \
         bash -c 'val=$(get_api_flag anonymous-auth 2>/dev/null || true); [ "$val" = "false" ] && echo "anonymous-auth=false" && return 0 || echo "anonymous-auth=$val (expect false)" && return 1'
 
+# shellcheck disable=SC2016 # inner-shell expansion
     run_check "1.2.2" "Ensure --authorization-mode is not AlwaysAllow" \
         bash -c 'val=$(get_api_flag authorization-mode 2>/dev/null || true); echo "$val" | grep -qv "AlwaysAllow" && echo "authorization-mode=$val" && return 0 || echo "authorization-mode=$val (AlwaysAllow)" && return 1'
 
+# shellcheck disable=SC2016 # inner-shell expansion
     run_check "1.2.3" "Ensure --authorization-mode includes Node" \
         bash -c 'val=$(get_api_flag authorization-mode 2>/dev/null || true); echo "$val" | grep -q "Node" && echo "Node included" && return 0 || echo "Node not in authorization-mode" && return 1'
 
+# shellcheck disable=SC2016 # inner-shell expansion
     run_check "1.2.4" "Ensure --authorization-mode includes RBAC" \
         bash -c 'val=$(get_api_flag authorization-mode 2>/dev/null || true); echo "$val" | grep -q "RBAC" && echo "RBAC included" && return 0 || echo "RBAC not in authorization-mode" && return 1'
 
+# shellcheck disable=SC2016 # inner-shell expansion
     run_check "1.2.5" "Ensure --token-auth-file is not set" \
         bash -c 'val=$(get_api_flag token-auth-file 2>/dev/null || true); [ -z "$val" ] && echo "not set" && return 0 || echo "token-auth-file=$val (should not be set)" && return 1'
 
+# shellcheck disable=SC2016 # inner-shell expansion
     run_check "1.2.6" "Ensure --DenyServiceExternalIPs is set" \
         bash -c 'val=$(get_api_flag enable-aggregator-routing 2>/dev/null || true); pgrep -x kube-apiserver >/dev/null 2>&1 && echo "DenyServiceExternalIPs check (admission plugin)" && return 0 || return 2'
 
+# shellcheck disable=SC2016 # inner-shell expansion
     run_check "1.2.7" "Ensure --kubelet-https is set to true" \
         bash -c 'val=$(get_api_flag kubelet-https 2>/dev/null || true); [ "$val" = "true" ] && echo "kubelet-https=true" && return 0 || echo "kubelet-https=$val (expect true)" && return 1'
 
+# shellcheck disable=SC2016 # inner-shell expansion
     run_check "1.2.8" "Ensure --kubelet-client-certificate and --kubelet-client-key are set" \
         bash -c 'cert=$(get_api_flag kubelet-client-certificate 2>/dev/null || true); key=$(get_api_flag kubelet-client-key 2>/dev/null || true); [ -n "$cert" ] && [ -n "$key" ] && echo "both set" && return 0 || echo "missing cert or key" && return 1'
 
+# shellcheck disable=SC2016 # inner-shell expansion
     run_check "1.2.9" "Ensure --kubelet-certificate-authority is set" \
         bash -c 'val=$(get_api_flag kubelet-certificate-authority 2>/dev/null || true); [ -n "$val" ] && echo "set: $val" && return 0 || echo "not set" && return 1'
 
+# shellcheck disable=SC2016 # inner-shell expansion
     run_check "1.2.10" "Ensure --authorization-mode is not AlwaysAllow (validation)" \
         bash -c 'val=$(get_api_flag authorization-mode 2>/dev/null || true); [ "$val" != "AlwaysAllow" ] && echo "OK" && return 0 || echo "AlwaysAllow" && return 1'
 
+# shellcheck disable=SC2016 # inner-shell expansion
     run_check "1.2.11" "Ensure --profiling is set to false" \
         bash -c 'val=$(get_api_flag profiling 2>/dev/null || true); [ "$val" = "false" ] && echo "profiling=false" && return 0 || echo "profiling=$val (expect false)" && return 1'
 
+# shellcheck disable=SC2016 # inner-shell expansion
     run_check "1.2.12" "Ensure --audit-log-maxage is set to 30 or as appropriate" \
         bash -c 'val=$(get_api_flag audit-log-maxage 2>/dev/null || true); [ -n "$val" ] && [ "$val" -ge 30 ] 2>/dev/null && echo "audit-log-maxage=$val" && return 0 || echo "audit-log-maxage=$val (expect >=30)" && return 1'
 
+# shellcheck disable=SC2016 # inner-shell expansion
     run_check "1.2.13" "Ensure --audit-log-maxbackup is set to 10 or as appropriate" \
         bash -c 'val=$(get_api_flag audit-log-maxbackup 2>/dev/null || true); [ -n "$val" ] && [ "$val" -ge 10 ] 2>/dev/null && echo "audit-log-maxbackup=$val" && return 0 || echo "audit-log-maxbackup=$val (expect >=10)" && return 1'
 
+# shellcheck disable=SC2016 # inner-shell expansion
     run_check "1.2.14" "Ensure --audit-log-maxsize is set to 100 or as appropriate" \
         bash -c 'val=$(get_api_flag audit-log-maxsize 2>/dev/null || true); [ -n "$val" ] && [ "$val" -ge 100 ] 2>/dev/null && echo "audit-log-maxsize=$val" && return 0 || echo "audit-log-maxsize=$val (expect >=100)" && return 1'
 
+# shellcheck disable=SC2016 # inner-shell expansion
     run_check "1.2.15" "Ensure --request-timeout is set appropriately" \
         bash -c 'val=$(get_api_flag request-timeout 2>/dev/null || true); [ -n "$val" ] && echo "request-timeout=$val" && return 0 || echo "not set (default)" && return 2'
 
     # 1.3 Controller Manager
     echo -e "  ${C_INFO}── 1.3 Controller Manager ──${C_RST}"
 
+# shellcheck disable=SC2016 # inner-shell expansion
     run_check "1.3.1" "Ensure --terminated-pod-gc-threshold is set" \
         bash -c 'val=$(get_controller_flag terminated-pod-gc-threshold 2>/dev/null || true); [ -n "$val" ] && echo "set: $val" && return 0 || echo "not set" && return 2'
 
+# shellcheck disable=SC2016 # inner-shell expansion
     run_check "1.3.2" "Ensure --profiling is set to false" \
         bash -c 'val=$(get_controller_flag profiling 2>/dev/null || true); [ "$val" = "false" ] && echo "profiling=false" && return 0 || echo "profiling=$val (expect false)" && return 1'
 
+# shellcheck disable=SC2016 # inner-shell expansion
     run_check "1.3.3" "Ensure --use-service-account-credentials is set to true" \
         bash -c 'val=$(get_controller_flag use-service-account-credentials 2>/dev/null || true); [ "$val" = "true" ] && echo "use-service-account-credentials=true" && return 0 || echo "not set to true" && return 1'
 
+# shellcheck disable=SC2016 # inner-shell expansion
     run_check "1.3.4" "Ensure --service-account-private-key-file is set" \
         bash -c 'val=$(get_controller_flag service-account-private-key-file 2>/dev/null || true); [ -n "$val" ] && echo "set: $val" && return 0 || echo "not set" && return 1'
 
+# shellcheck disable=SC2016 # inner-shell expansion
     run_check "1.3.5" "Ensure --root-ca-file is set" \
         bash -c 'val=$(get_controller_flag root-ca-file 2>/dev/null || true); [ -n "$val" ] && echo "set: $val" && return 0 || echo "not set" && return 1'
 
+# shellcheck disable=SC2016 # inner-shell expansion
     run_check "1.3.6" "Ensure --RotateKubeletServerCertificate is set to true" \
         bash -c 'val=$(get_controller_flag feature-gates 2>/dev/null || true); echo "$val" | grep -q "RotateKubeletServerCertificate=true" && echo "enabled" && return 0 || echo "not enabled" && return 1'
 
+# shellcheck disable=SC2016 # inner-shell expansion
     run_check "1.3.7" "Ensure --bind-address is set to 127.0.0.1" \
         bash -c 'val=$(get_controller_flag bind-address 2>/dev/null || true); [ "$val" = "127.0.0.1" ] && echo "bind-address=127.0.0.1" && return 0 || echo "bind-address=$val (expect 127.0.0.1)" && return 1'
 
     # 1.4 Scheduler
     echo -e "  ${C_INFO}── 1.4 Scheduler ──${C_RST}"
 
+# shellcheck disable=SC2016 # inner-shell expansion
     run_check "1.4.1" "Ensure --profiling is set to false" \
         bash -c 'val=$(get_scheduler_flag profiling 2>/dev/null || true); [ "$val" = "false" ] && echo "profiling=false" && return 0 || echo "profiling=$val (expect false)" && return 1'
 
+# shellcheck disable=SC2016 # inner-shell expansion
     run_check "1.4.2" "Ensure --bind-address is set to 127.0.0.1" \
         bash -c 'val=$(get_scheduler_flag bind-address 2>/dev/null || true); [ "$val" = "127.0.0.1" ] && echo "bind-address=127.0.0.1" && return 0 || echo "bind-address=$val (expect 127.0.0.1)" && return 1'
 
     # 1.5 Etcd
     echo -e "  ${C_INFO}── 1.5 Etcd ──${C_RST}"
 
+# shellcheck disable=SC2016 # inner-shell expansion
     run_check "1.5.1" "Ensure --cert-file and --key-file are set appropriately" \
         bash -c 'cert=$(get_etcd_flag cert-file 2>/dev/null || true); key=$(get_etcd_flag key-file 2>/dev/null || true); [ -n "$cert" ] && [ -n "$key" ] && echo "both set" && return 0 || echo "missing cert or key" && return 1'
 
+# shellcheck disable=SC2016 # inner-shell expansion
     run_check "1.5.2" "Ensure --client-cert-auth is set to true" \
         bash -c 'val=$(get_etcd_flag client-cert-auth 2>/dev/null || true); [ "$val" = "true" ] && echo "client-cert-auth=true" && return 0 || echo "client-cert-auth=$val (expect true)" && return 1'
 
+# shellcheck disable=SC2016 # inner-shell expansion
     run_check "1.5.3" "Ensure --auto-tls is not set to true" \
         bash -c 'val=$(get_etcd_flag auto-tls 2>/dev/null || true); [ "$val" != "true" ] && echo "auto-tls not true" && return 0 || echo "auto-tls=true (should be false)" && return 1'
 
+# shellcheck disable=SC2016 # inner-shell expansion
     run_check "1.5.4" "Ensure --peer-cert-file and --peer-key-file are set appropriately" \
         bash -c 'cert=$(get_etcd_flag peer-cert-file 2>/dev/null || true); key=$(get_etcd_flag peer-key-file 2>/dev/null || true); [ -n "$cert" ] && [ -n "$key" ] && echo "both set" && return 0 || echo "missing peer cert or key" && return 1'
 
+# shellcheck disable=SC2016 # inner-shell expansion
     run_check "1.5.5" "Ensure --peer-client-cert-auth is set to true" \
         bash -c 'val=$(get_etcd_flag peer-client-cert-auth 2>/dev/null || true); [ "$val" = "true" ] && echo "peer-client-cert-auth=true" && return 0 || echo "peer-client-cert-auth=$val (expect true)" && return 1'
 
+# shellcheck disable=SC2016 # inner-shell expansion
     run_check "1.5.6" "Ensure --peer-auto-tls is not set to true" \
         bash -c 'val=$(get_etcd_flag peer-auto-tls 2>/dev/null || true); [ "$val" != "true" ] && echo "peer-auto-tls not true" && return 0 || echo "peer-auto-tls=true (should be false)" && return 1'
 }
@@ -490,30 +523,39 @@ section_worker_node() {
     # 2.2 Kubelet
     echo -e "  ${C_INFO}── 2.2 Kubelet ──${C_RST}"
 
+# shellcheck disable=SC2016 # inner-shell expansion
     run_check "2.2.1" "Ensure --anonymous-auth is set to false" \
         bash -c 'val=$(get_kubelet_flag anonymous-auth 2>/dev/null || get_kubelet_config authentication 2>/dev/null || true); echo "$val" | grep -q "false" && echo "anonymous-auth=false" && return 0 || echo "anonymous-auth=$val (expect false)" && return 1'
 
+# shellcheck disable=SC2016 # inner-shell expansion
     run_check "2.2.2" "Ensure --authorization-mode is not AlwaysAllow" \
         bash -c 'val=$(get_kubelet_flag authorization-mode 2>/dev/null || get_kubelet_config authorization 2>/dev/null || true); echo "$val" | grep -qv "AlwaysAllow" && echo "authorization-mode=$val" && return 0 || echo "authorization-mode=$val (AlwaysAllow)" && return 1'
 
+# shellcheck disable=SC2016 # inner-shell expansion
     run_check "2.2.3" "Ensure --client-ca-file is set appropriately" \
         bash -c 'val=$(get_kubelet_flag client-ca-file 2>/dev/null || true); [ -n "$val" ] && echo "set: $val" && return 0 || echo "not set" && return 1'
 
+# shellcheck disable=SC2016 # inner-shell expansion
     run_check "2.2.4" "Ensure --read-only-port is disabled (0)" \
         bash -c 'val=$(get_kubelet_flag read-only-port 2>/dev/null || get_kubelet_config readOnlyPort 2>/dev/null || true); [ "$val" = "0" ] && echo "read-only-port=0" && return 0 || echo "read-only-port=$val (expect 0)" && return 1'
 
+# shellcheck disable=SC2016 # inner-shell expansion
     run_check "2.2.5" "Ensure --protect-kernel-defaults is set to true" \
         bash -c 'val=$(get_kubelet_flag protect-kernel-defaults 2>/dev/null || get_kubelet_config protectKernelDefaults 2>/dev/null || true); [ "$val" = "true" ] && echo "protect-kernel-defaults=true" && return 0 || echo "protect-kernel-defaults=$val (expect true)" && return 1'
 
+# shellcheck disable=SC2016 # inner-shell expansion
     run_check "2.2.6" "Ensure --event-qps is set to 0 or as appropriate" \
         bash -c 'val=$(get_kubelet_flag event-qps 2>/dev/null || get_kubelet_config eventRecordQPS 2>/dev/null || true); [ "$val" = "0" ] && echo "event-qps=0" && return 0 || echo "event-qps=$val" && return 2'
 
+# shellcheck disable=SC2016 # inner-shell expansion
     run_check "2.2.7" "Ensure --tls-cert-file and --tls-private-key-file are set appropriately" \
         bash -c 'cert=$(get_kubelet_flag tls-cert-file 2>/dev/null || true); key=$(get_kubelet_flag tls-private-key-file 2>/dev/null || true); [ -n "$cert" ] && [ -n "$key" ] && echo "both set" && return 0 || echo "missing cert or key" && return 1'
 
+# shellcheck disable=SC2016 # inner-shell expansion
     run_check "2.2.8" "Ensure --rotateCertificates is set to true or --feature-gates RotateKubeletClientCertificate=true" \
         bash -c 'val=$(get_kubelet_flag rotateCertificates 2>/dev/null || get_kubelet_config rotateCertificates 2>/dev/null || true); [ "$val" = "true" ] && echo "rotateCertificates=true" && return 0 || echo "rotateCertificates=$val (expect true)" && return 1'
 
+# shellcheck disable=SC2016 # inner-shell expansion
     run_check "2.2.9" "Ensure RotateKubeletServerCertificate is set to true" \
         bash -c 'val=$(get_kubelet_flag feature-gates 2>/dev/null || true); echo "$val" | grep -q "RotateKubeletServerCertificate=true" && echo "enabled" && return 0 || echo "not enabled" && return 1'
 }
@@ -526,69 +568,85 @@ section_policies() {
     # 3.1 RBAC
     echo -e "  ${C_INFO}── 3.1 RBAC ──${C_RST}"
 
+# shellcheck disable=SC2016 # inner-shell expansion
     run_check "3.1.1" "Ensure ClusterRoleBinding system:masters has no direct user subjects" \
         bash -c 'count=$(k get clusterrolebinding system:masters -o jsonpath="{.subjects[?(@.kind==\"User\")].name}" 2>/dev/null | wc -l); [ "$count" -eq 0 ] && echo "no direct user subjects" && return 0 || echo "$count direct user subjects (should be 0)" && return 1'
 
+# shellcheck disable=SC2016 # inner-shell expansion
     run_check "3.1.2" "Ensure cluster-admin role is not granted to all authenticated users" \
         bash -c 'bindings=$(k get clusterrolebinding -o json 2>/dev/null); echo "$bindings" | grep -q "system:authenticated" && echo "$bindings" | grep -q "cluster-admin" && echo "WARNING: cluster-admin granted to all authenticated" && return 1 || echo "OK" && return 0'
 
     # 3.2 Pod Security Standards
     echo -e "  ${C_INFO}── 3.2 Pod Security Standards ──${C_RST}"
 
+# shellcheck disable=SC2016 # inner-shell expansion
     run_check "3.2.1" "Ensure PSA restricted profile is enforced on critical namespaces" \
         bash -c 'count=$(k get namespaces --no-headers 2>/dev/null | wc -l); restricted=$(k get namespaces -o json 2>/dev/null | grep -c "restricted" || true); echo "$restricted/$count namespaces with restricted PSA"; [ "$restricted" -gt 0 ] && return 0 || return 2'
 
+# shellcheck disable=SC2016 # inner-shell expansion
     run_check "3.2.2" "Ensure default namespace has PSA label" \
         bash -c 'labels=$(k get namespace default -o jsonpath="{.metadata.labels}" 2>/dev/null); echo "$labels" | grep -q "pod-security.kubernetes.io" && echo "PSA labels present" && return 0 || echo "no PSA labels on default namespace" && return 2'
 
     # 3.3 Network Policies
     echo -e "  ${C_INFO}── 3.3 Network Policies ──${C_RST}"
 
+# shellcheck disable=SC2016 # inner-shell expansion
     run_check "3.3.1" "Ensure Network Policies are enforced where applicable" \
         bash -c 'np_count=$(k get networkpolicies --all-namespaces --no-headers 2>/dev/null | wc -l); echo "$np_count network policies"; [ "$np_count" -gt 0 ] && return 0 || echo "no network policies found" && return 2'
 
     # 3.4 Secrets
     echo -e "  ${C_INFO}── 3.4 Secrets ──${C_RST}"
 
+# shellcheck disable=SC2016 # inner-shell expansion
     run_check "3.4.1" "Ensure Secrets are not stored in plain text in ConfigMaps" \
         bash -c 'cm_with_secrets=$(k get configmaps --all-namespaces -o json 2>/dev/null | grep -ciE "(password|secret|key|token)" || true); echo "$cm_with_secrets configmaps with potential secrets"; [ "$cm_with_secrets" -eq 0 ] && return 0 || return 2'
 
     # 3.5 Encryption
     echo -e "  ${C_INFO}── 3.5 Encryption ──${C_RST}"
 
+# shellcheck disable=SC2016 # inner-shell expansion
     run_check "3.5.1" "Ensure encryption at rest is configured" \
         bash -c 'val=$(get_api_flag encryption-provider-config 2>/dev/null || true); [ -n "$val" ] && echo "encryption-provider-config=$val" && return 0 || echo "encryption at rest not configured" && return 1'
 
     # 3.6 Admission Controllers
     echo -e "  ${C_INFO}── 3.6 Admission Controllers ──${C_RST}"
 
+# shellcheck disable=SC2016 # inner-shell expansion
     run_check "3.6.1" "Ensure EventRateLimit admission controller is enabled" \
         bash -c 'val=$(get_api_flag enable-admission-plugins 2>/dev/null || true); echo "$val" | grep -q "EventRateLimit" && echo "EventRateLimit enabled" && return 0 || echo "EventRateLimit not enabled" && return 2'
 
+# shellcheck disable=SC2016 # inner-shell expansion
     run_check "3.6.2" "Ensure AlwaysAdmit admission controller is not enabled" \
         bash -c 'val=$(get_api_flag enable-admission-plugins 2>/dev/null || true); echo "$val" | grep -qv "AlwaysAdmit" && echo "AlwaysAdmit not enabled" && return 0 || echo "AlwaysAdmit enabled (should not be)" && return 1'
 
+# shellcheck disable=SC2016 # inner-shell expansion
     run_check "3.6.3" "Ensure ServiceAccount admission controller is enabled" \
         bash -c 'val=$(get_api_flag enable-admission-plugins 2>/dev/null || true); echo "$val" | grep -q "ServiceAccount" && echo "ServiceAccount enabled" && return 0 || echo "ServiceAccount not enabled" && return 1'
 
+# shellcheck disable=SC2016 # inner-shell expansion
     run_check "3.6.4" "Ensure NamespaceLifecycle admission controller is enabled" \
         bash -c 'val=$(get_api_flag enable-admission-plugins 2>/dev/null || true); echo "$val" | grep -q "NamespaceLifecycle" && echo "NamespaceLifecycle enabled" && return 0 || echo "NamespaceLifecycle not enabled" && return 1'
 
+# shellcheck disable=SC2016 # inner-shell expansion
     run_check "3.6.5" "Ensure PodSecurityPolicy/PodSecurity admission controller is enabled" \
         bash -c 'val=$(get_api_flag enable-admission-plugins 2>/dev/null || true); echo "$val" | grep -qE "PodSecurityPolicy|PodSecurity" && echo "PodSecurity enabled" && return 0 || echo "PodSecurity not enabled" && return 1'
 
+# shellcheck disable=SC2016 # inner-shell expansion
     run_check "3.6.6" "Ensure NodeRestriction admission controller is enabled" \
         bash -c 'val=$(get_api_flag enable-admission-plugins 2>/dev/null || true); echo "$val" | grep -q "NodeRestriction" && echo "NodeRestriction enabled" && return 0 || echo "NodeRestriction not enabled" && return 1'
 
     # 3.7 General Policies
     echo -e "  ${C_INFO}── 3.7 General Policies ──${C_RST}"
 
+# shellcheck disable=SC2016 # inner-shell expansion
     run_check "3.7.1" "Ensure --audit-log-path is set" \
         bash -c 'val=$(get_api_flag audit-log-path 2>/dev/null || true); [ -n "$val" ] && echo "audit-log-path=$val" && return 0 || echo "audit-log-path not set" && return 1'
 
+# shellcheck disable=SC2016 # inner-shell expansion
     run_check "3.7.2" "Ensure --audit-log-maxage is set to 30 or as appropriate" \
         bash -c 'val=$(get_api_flag audit-log-maxage 2>/dev/null || true); [ -n "$val" ] && [ "$val" -ge 30 ] 2>/dev/null && echo "audit-log-maxage=$val" && return 0 || echo "audit-log-maxage=$val (expect >=30)" && return 1'
 
+# shellcheck disable=SC2016 # inner-shell expansion
     run_check "3.7.3" "Ensure --audit-log-maxbackup is set to 10 or as appropriate" \
         bash -c 'val=$(get_api_flag audit-log-maxbackup 2>/dev/null || true); [ -n "$val" ] && [ "$val" -ge 10 ] 2>/dev/null && echo "audit-log-maxbackup=$val" && return 0 || echo "audit-log-maxbackup=$val (expect >=10)" && return 1'
 }
@@ -598,27 +656,35 @@ section_cluster_wide() {
     echo ""
     echo "━━━ 4.x Cluster-Wide Checks ━━━"
 
+# shellcheck disable=SC2016 # inner-shell expansion
     run_check "4.1.1" "Ensure all namespaces have Network Policies" \
         bash -c 'ns_count=$(k get namespaces --no-headers 2>/dev/null | wc -l); ns_with_np=$(k get networkpolicies --all-namespaces -o json 2>/dev/null | grep -o "\"namespace\":\"[^\"]*\"" | sort -u | wc -l); echo "$ns_with_np/$ns_count namespaces with NetworkPolicy"; [ "$ns_with_np" -ge 1 ] && return 0 || return 2'
 
+# shellcheck disable=SC2016 # inner-shell expansion
     run_check "4.1.2" "Ensure all ServiceAccounts have imagePullSecrets only when necessary" \
         bash -c 'sa_with_secrets=$(k get serviceaccounts --all-namespaces -o json 2>/dev/null | grep -c "imagePullSecrets" || true); echo "$sa_with_secrets SAs with imagePullSecrets"; return 0'
 
+# shellcheck disable=SC2016 # inner-shell expansion
     run_check "4.1.3" "Ensure default ServiceAccount is not actively used" \
         bash -c 'pods_with_default=$(k get pods --all-namespaces -o json 2>/dev/null | grep -c "\"serviceAccountName\":\"default\"" || true); echo "$pods_with_default pods using default SA"; [ "$pods_with_default" -eq 0 ] && return 0 || return 2'
 
+# shellcheck disable=SC2016 # inner-shell expansion
     run_check "4.1.4" "Ensure Kubernetes Dashboard is not deployed (or secured)" \
         bash -c 'dashboard=$(k get pods --all-namespaces 2>/dev/null | grep -c "kubernetes-dashboard" || true); [ "$dashboard" -eq 0 ] && echo "no dashboard" && return 0 || echo "$dashboard dashboard pods found" && return 2'
 
+# shellcheck disable=SC2016 # inner-shell expansion
     run_check "4.1.5" "Ensure RBAC is enabled" \
         bash -c 'val=$(get_api_flag authorization-mode 2>/dev/null || true); echo "$val" | grep -q "RBAC" && echo "RBAC enabled" && return 0 || echo "RBAC not enabled" && return 1'
 
+# shellcheck disable=SC2016 # inner-shell expansion
     run_check "4.1.6" "Ensure no pods in default namespace without explicit SA" \
         bash -c 'default_pods=$(k get pods -n default --no-headers 2>/dev/null | wc -l); echo "$default_pods in default namespace"; return 0'
 
+# shellcheck disable=SC2016 # inner-shell expansion
     run_check "4.1.7" "Ensure cluster has minimum 3 master nodes (HA)" \
         bash -c 'masters=$(k get nodes -l node-role.kubernetes.io/control-plane --no-headers 2>/dev/null | wc -l); echo "$masters master nodes"; [ "$masters" -ge 3 ] && return 0 || echo "less than 3 masters (no HA)" && return 2'
 
+# shellcheck disable=SC2016 # inner-shell expansion
     run_check "4.1.8" "Ensure Kubernetes version is supported (not EOL)" \
         bash -c 'ver=$(echo "$K8S_VERSION" | grep -oE "[0-9]+\.[0-9]+" | head -1); minor=$(echo "$ver" | cut -d. -f2); [ "$minor" -ge 26 ] 2>/dev/null && echo "K8s $K8S_VERSION (supported)" && return 0 || echo "K8s $K8S_VERSION may be EOL" && return 2'
 }
@@ -628,33 +694,43 @@ section_workload() {
     echo ""
     echo "━━━ 5.x Workload Security ━━━"
 
+# shellcheck disable=SC2016 # inner-shell expansion
     run_check "5.1.1" "Ensure pods do not run as root (cluster-wide)" \
         bash -c 'root_pods=$(k get pods --all-namespaces -o json 2>/dev/null | grep -c "\"runAsUser\":0" || true); echo "$root_pods pods runAsUser=0"; [ "$root_pods" -eq 0 ] && return 0 || return 2'
 
+# shellcheck disable=SC2016 # inner-shell expansion
     run_check "5.1.2" "Ensure pods do not use privileged containers" \
         bash -c 'priv_pods=$(k get pods --all-namespaces -o json 2>/dev/null | grep -c "\"privileged\":true" || true); echo "$priv_pods privileged containers"; [ "$priv_pods" -eq 0 ] && return 0 || return 1'
 
+# shellcheck disable=SC2016 # inner-shell expansion
     run_check "5.1.3" "Ensure pods do not share host network namespace" \
         bash -c 'host_net=$(k get pods --all-namespaces -o json 2>/dev/null | grep -c "\"hostNetwork\":true" || true); echo "$host_net pods with hostNetwork"; [ "$host_net" -eq 0 ] && return 0 || return 1'
 
+# shellcheck disable=SC2016 # inner-shell expansion
     run_check "5.1.4" "Ensure pods do not share host PID namespace" \
         bash -c 'host_pid=$(k get pods --all-namespaces -o json 2>/dev/null | grep -c "\"hostPID\":true" || true); echo "$host_pid pods with hostPID"; [ "$host_pid" -eq 0 ] && return 0 || return 1'
 
+# shellcheck disable=SC2016 # inner-shell expansion
     run_check "5.1.5" "Ensure pods do not share host IPC namespace" \
         bash -c 'host_ipc=$(k get pods --all-namespaces -o json 2>/dev/null | grep -c "\"hostIPC\":true" || true); echo "$host_ipc pods with hostIPC"; [ "$host_ipc" -eq 0 ] && return 0 || return 1'
 
+# shellcheck disable=SC2016 # inner-shell expansion
     run_check "5.1.6" "Ensure containers do not have dangerous capabilities" \
         bash -c 'cap_pods=$(k get pods --all-namespaces -o json 2>/dev/null | grep -c "SYS_ADMIN\|NET_ADMIN\|SYS_PTRACE\|SYS_MODULE" || true); echo "$cap_pods pods with dangerous caps"; [ "$cap_pods" -eq 0 ] && return 0 || return 1'
 
+# shellcheck disable=SC2016 # inner-shell expansion
     run_check "5.1.7" "Ensure containers do not mount docker.sock" \
         bash -c 'sock_pods=$(k get pods --all-namespaces -o json 2>/dev/null | grep -c "docker.sock" || true); echo "$sock_pods pods mounting docker.sock"; [ "$sock_pods" -eq 0 ] && return 0 || return 1'
 
+# shellcheck disable=SC2016 # inner-shell expansion
     run_check "5.1.8" "Ensure containers have resource limits set" \
         bash -c 'pods_total=$(k get pods --all-namespaces --no-headers 2>/dev/null | wc -l); pods_with_limits=$(k get pods --all-namespaces -o json 2>/dev/null | grep -c "\"limits\"" || true); echo "$pods_with_limits/$pods_total pods with limits"; return 0'
 
+# shellcheck disable=SC2016 # inner-shell expansion
     run_check "5.1.9" "Ensure containers have liveness/readiness probes" \
         bash -c 'pods_with_probe=$(k get pods --all-namespaces -o json 2>/dev/null | grep -c "livenessProbe\|readinessProbe" || true); echo "$pods_with_probe pods with probes"; return 0'
 
+# shellcheck disable=SC2016 # inner-shell expansion
     run_check "5.1.10" "Ensure containers have image tag set (not :latest)" \
         bash -c 'latest_images=$(k get pods --all-namespaces -o json 2>/dev/null | grep -c ":latest" || true); echo "$latest_images pods with :latest image"; [ "$latest_images" -eq 0 ] && return 0 || return 2'
 }

@@ -57,6 +57,7 @@ C_RST='\033[0m'
 # ── Distro detection ───────────────────────────────────────────────
 detect_distro() {
     if [ -f /etc/os-release ]; then
+# shellcheck disable=SC1091 # system file sourced by design
         . /etc/os-release
         DISTRO_ID="$ID"
         DISTRO_VERSION="$VERSION_ID"
@@ -234,30 +235,38 @@ section_access_control() {
     echo ""
     echo "━━━ Access Control (SRG-OS-0000xx) ━━━"
 
+# shellcheck disable=SC2016 # inner-shell expansion
     run_check "SRG-OS-000023" "CAT1" "Ensure SSH root login is disabled" \
         bash -c 'val=$(sshd -T 2>/dev/null | awk "/^permitrootlogin /{print \$2}"); [ "$val" = "no" ] && echo "PermitRootLogin=no" && return 0 || echo "PermitRootLogin=$val (Expected no)" && return 1'
 
+# shellcheck disable=SC2016 # inner-shell expansion
     run_check "SRG-OS-000024" "CAT1" "Ensure SSH protocol is 2" \
         bash -c 'val=$(sshd -T 2>/dev/null | awk "/^protocol /{print \$2}"); [ "$val" = "2" ] || [ -z "$val" ] && echo "Protocol=2 (default)" && return 0 || echo "Protocol=$val" && return 1'
 
+# shellcheck disable=SC2016 # inner-shell expansion
     run_check "SRG-OS-000025" "CAT1" "Ensure SSH PermitEmptyPasswords is disabled" \
         bash -c 'val=$(sshd -T 2>/dev/null | awk "/^permitemptypasswords /{print \$2}"); [ "$val" = "no" ] && echo "PermitEmptyPasswords=no" && return 0 || echo "PermitEmptyPasswords=$val" && return 1'
 
+# shellcheck disable=SC2016 # inner-shell expansion
     run_check "SRG-OS-000026" "CAT1" "Ensure SSH MaxAuthTries is 4 or less" \
         bash -c 'val=$(sshd -T 2>/dev/null | awk "/^maxauthtries /{print \$2}"); [ -n "$val" ] && [ "$val" -le 4 ] 2>/dev/null && echo "MaxAuthTries=$val" && return 0 || echo "MaxAuthTries=$val (Expected <=4)" && return 1'
 
+# shellcheck disable=SC2016 # inner-shell expansion
     run_check "SRG-OS-000027" "CAT2" "Ensure SSH ClientAliveInterval is set" \
         bash -c 'val=$(sshd -T 2>/dev/null | awk "/^clientaliveinterval /{print \$2}"); [ -n "$val" ] && [ "$val" -le 900 ] 2>/dev/null && echo "ClientAliveInterval=$val" && return 0 || echo "ClientAliveInterval=$val (Expected <=900)" && return 1'
 
+# shellcheck disable=SC2016 # inner-shell expansion
     run_check "SRG-OS-000028" "CAT2" "Ensure SSH LoginGraceTime is set to 60 or less" \
         bash -c 'val=$(sshd -T 2>/dev/null | awk "/^logingracetime /{print \$2}"); [ -n "$val" ] && [ "$val" -le 60 ] 2>/dev/null && echo "LoginGraceTime=$val" && return 0 || echo "LoginGraceTime=$val (Expected <=60)" && return 1'
 
     run_check "SRG-OS-000029" "CAT2" "Ensure SSH access is restricted to required users/groups" \
         bash -c 'sshd -T 2>/dev/null | grep -q "^allowusers\|^allowgroups" && echo "access list configured" && return 0 || echo "no SSH access restriction" && return 2'
 
+# shellcheck disable=SC2016 # inner-shell expansion
     run_check "SRG-OS-000030" "CAT2" "Ensure SSH IgnoreRhosts is enabled" \
         bash -c 'val=$(sshd -T 2>/dev/null | awk "/^ignorerhosts /{print \$2}"); [ "$val" = "yes" ] && echo "IgnoreRhosts=yes" && return 0 || echo "IgnoreRhosts=$val" && return 1'
 
+# shellcheck disable=SC2016 # inner-shell expansion
     run_check "SRG-OS-000031" "CAT2" "Ensure SSH HostbasedAuthentication is disabled" \
         bash -c 'val=$(sshd -T 2>/dev/null | awk "/^hostbasedauthentication /{print \$2}"); [ "$val" = "no" ] && echo "HostbasedAuthentication=no" && return 0 || echo "HostbasedAuthentication=$val" && return 1'
 }
@@ -282,6 +291,7 @@ section_audit() {
     run_check "SRG-OS-000036" "CAT2" "Ensure audit logs are not automatically deleted" \
         bash -c 'grep "max_log_file_action" /etc/audit/auditd.conf 2>/dev/null | grep -q "keep_logs" && echo "keep_logs" && return 0 || echo "max_log_file_action not keep_logs" && return 1'
 
+# shellcheck disable=SC2016 # inner-shell expansion
     run_check "SRG-OS-000037" "CAT2" "Ensure auditd log directory permissions are configured" \
         bash -c 'dir=$(grep "^log_file" /etc/audit/auditd.conf 2>/dev/null | awk "{print \$3}" | sed "s|/[^/]*$||"); [ -d "$dir" ] && check_file_perm "$dir" 750 || echo "audit log dir not found" && return 2'
 
@@ -306,15 +316,19 @@ section_identification() {
     echo ""
     echo "━━━ Identification and Authentication (SRG-OS-0000xx) ━━━"
 
+# shellcheck disable=SC2016 # inner-shell expansion
     run_check "SRG-OS-000043" "CAT1" "Ensure no users have empty password fields" \
         bash -c 'n=$(awk -F: "(\$2 == \"\") { print \$1 }" /etc/shadow 2>/dev/null | wc -l); [ "$n" -eq 0 ] && echo "no empty passwords" && return 0 || echo "$n empty passwords" && return 1'
 
+# shellcheck disable=SC2016 # inner-shell expansion
     run_check "SRG-OS-000044" "CAT1" "Ensure root is the only UID 0 account" \
         bash -c 'n=$(awk -F: "(\$3 == 0) { print \$1 }" /etc/passwd | wc -l); [ "$n" -eq 1 ] && echo "only root has UID 0" && return 0 || echo "$n accounts with UID 0" && return 1'
 
+# shellcheck disable=SC2016 # inner-shell expansion
     run_check "SRG-OS-000045" "CAT2" "Ensure password minimum length is configured" \
         bash -c '[ "$DISTRO_FAMILY" = "debian" ] && { grep -q "minlen" /etc/pam.d/common-password 2>/dev/null && echo "minlen configured" && return 0 || echo "no minlen in PAM" && return 1; } || { grep -q "minlen" /etc/security/pwquality.conf 2>/dev/null && echo "minlen configured" && return 0 || echo "no minlen" && return 1; }'
 
+# shellcheck disable=SC2016 # inner-shell expansion
     run_check "SRG-OS-000046" "CAT2" "Ensure password complexity is configured" \
         bash -c '[ "$DISTRO_FAMILY" = "debian" ] && { grep -q "pam_pwquality\|pam_cracklib" /etc/pam.d/common-password 2>/dev/null && echo "pwquality configured" && return 0 || echo "no pwquality" && return 1; } || { grep -q "pam_pwquality" /etc/pam.d/system-auth 2>/dev/null && return 0 || echo "no pwquality" && return 1; }'
 
@@ -327,9 +341,11 @@ section_identification() {
     run_check "SRG-OS-000049" "CAT2" "Ensure password hashing algorithm is up to date" \
         bash -c 'grep -q "yescrypt\|sha512" /etc/pam.d/common-password /etc/pam.d/system-auth 2>/dev/null && echo "strong hash configured" && return 0 || echo "hash algorithm not verified" && return 2'
 
+# shellcheck disable=SC2016 # inner-shell expansion
     run_check "SRG-OS-000050" "CAT2" "Ensure no duplicate UIDs exist" \
         bash -c 'dups=$(awk -F: "{print \$3}" /etc/passwd | sort | uniq -d); [ -z "$dups" ] && echo "no duplicate UIDs" && return 0 || echo "duplicate UIDs: $dups" && return 1'
 
+# shellcheck disable=SC2016 # inner-shell expansion
     run_check "SRG-OS-000051" "CAT2" "Ensure no duplicate user names exist" \
         bash -c 'dups=$(awk -F: "{print \$1}" /etc/passwd | sort | uniq -d); [ -z "$dups" ] && echo "no duplicate users" && return 0 || echo "duplicate users: $dups" && return 1'
 }
@@ -405,12 +421,15 @@ section_config_management() {
     run_check "SRG-OS-000071" "CAT2" "Ensure permissions on /etc/cron.d are configured" \
         bash -c 'check_file_perm /etc/cron.d 700'
 
+# shellcheck disable=SC2016 # inner-shell expansion
     run_check "SRG-OS-000072" "CAT1" "Ensure no world writable files exist" \
         bash -c 'n=$(df --local -P 2>/dev/null | awk "{if (NR!=1) print \$6}" | xargs -I "{}" find "{}" -xdev -type f -perm -0002 2>/dev/null | wc -l); [ "$n" -eq 0 ] && echo "no world writable files" && return 0 || echo "$n world writable files" && return 1'
 
+# shellcheck disable=SC2016 # inner-shell expansion
     run_check "SRG-OS-000073" "CAT2" "Ensure no unowned files or directories exist" \
         bash -c 'n=$(df --local -P 2>/dev/null | awk "{if (NR!=1) print \$6}" | xargs -I "{}" find "{}" -xdev -nouser 2>/dev/null | wc -l); [ "$n" -eq 0 ] && echo "no unowned files" && return 0 || echo "$n unowned files" && return 1'
 
+# shellcheck disable=SC2016 # inner-shell expansion
     run_check "SRG-OS-000074" "CAT2" "Ensure no ungrouped files or directories exist" \
         bash -c 'n=$(df --local -P 2>/dev/null | awk "{if (NR!=1) print \$6}" | xargs -I "{}" find "{}" -xdev -nogroup 2>/dev/null | wc -l); [ "$n" -eq 0 ] && echo "no ungrouped files" && return 0 || echo "$n ungrouped files" && return 1'
 }
@@ -456,6 +475,7 @@ section_os_hardening() {
     echo ""
     echo "━━━ Operating System Hardening (SRG-OS-0000xx) ━━━"
 
+# shellcheck disable=SC2016 # inner-shell expansion
     run_check "SRG-OS-000085" "CAT1" "Ensure SELinux or AppArmor is enabled" \
         bash -c '[ "$DISTRO_FAMILY" = "debian" ] && { apparmor_status 2>/dev/null | grep -q "profiles are loaded" && echo "AppArmor active" && return 0 || echo "AppArmor not active" && return 1; } || { sestatus 2>/dev/null | grep -q "enforcing" && echo "SELinux enforcing" && return 0 || echo "SELinux not enforcing" && return 1; }'
 

@@ -32,6 +32,7 @@ PKG_INSTALL=""
 FW_KIND=""
 
 if [ -f /etc/os-release ]; then
+# shellcheck disable=SC1091 # system file sourced by design
     . /etc/os-release
     DISTRO=$ID
     DISTRO_VER=$VERSION_ID
@@ -123,7 +124,9 @@ ssh_apply_and_reload() {
 
 ssh_config_rewind() {
     local mode=$1 latest
-    latest=$(ls -1t /etc/ssh/sshd_config.orig-* 2>/dev/null | head -n 1)
+    latest=""
+    local orig_f
+    for orig_f in /etc/ssh/sshd_config.orig-*; do [ -e "$orig_f" ] && latest=$orig_f; done
     if [ -z "$latest" ]; then
         echo -e "${C_FAIL}No available config snapshot, cannot rollback.${C_RST}"
         return 1
@@ -156,7 +159,7 @@ gauge() {
     local fill=$(( pct * width / 100 ))
     local blank=$(( width - fill ))
     printf "  %-10s ${C_INFO}│" "$name"
-    for ((i=0; i<fill; i++)); do printf "${tone}▮${C_RST}"; done
+    for ((i=0; i<fill; i++)); do printf "%s▮%s" "${tone}" "${C_RST}"; done
     for ((i=0; i<blank; i++)); do printf "▯"; done
     printf "${C_INFO}│${tone} %s%%${C_RST}\n" "$pct"
 }
@@ -165,9 +168,9 @@ gauge() {
 fw_grant_tcp() {
     local port=$1
     if [ "$FW_KIND" = "ufw" ]; then
-        ufw allow ${port}/tcp
+        ufw allow "${port}/tcp"
     else
-        firewall-cmd --permanent --add-port=${port}/tcp >/dev/null 2>&1
+        firewall-cmd --permanent --add-port="${port}/tcp" >/dev/null 2>&1
         firewall-cmd --reload >/dev/null 2>&1
     fi
 }
@@ -248,6 +251,7 @@ secure_vps_self_update() {
 
 pkg_upgrade_all() {
     echo -e "${C_INFO}Upgrading system packages, this may take a while...${C_RST}"
+# shellcheck disable=SC2086 # intentionally unquoted: PKG_UPGRADE is a composite command executed by eval
     eval $PKG_UPGRADE
     echo -e "${C_OK}System package upgrade complete.${C_RST}"
     wait_key
@@ -274,11 +278,11 @@ ssh_port_shift() {
     # Allow new port before modifying config to avoid self-lockout
     if [ "$FW_KIND" = "ufw" ]; then
         eval "$PKG_INSTALL ufw > /dev/null 2>&1"
-        ufw allow $new_port/tcp
+        ufw allow "$new_port/tcp"
     else
         eval "$PKG_INSTALL firewalld > /dev/null 2>&1"
         systemctl start firewalld
-        firewall-cmd --permanent --add-port=$new_port/tcp
+        firewall-cmd --permanent --add-port="$new_port/tcp"
         firewall-cmd --reload
     fi
 
@@ -290,8 +294,8 @@ ssh_port_shift() {
             eval "$PKG_INSTALL policycoreutils-python >/dev/null 2>&1"
         fi
         if command -v semanage >/dev/null 2>&1; then
-            semanage port -a -t ssh_port_t -p tcp $new_port 2>/dev/null || \
-            semanage port -m -t ssh_port_t -p tcp $new_port 2>/dev/null
+            semanage port -a -t ssh_port_t -p tcp "$new_port" 2>/dev/null || \
+            semanage port -m -t ssh_port_t -p tcp "$new_port" 2>/dev/null
             echo -e "${C_OK}Port $new_port registered with SELinux.${C_RST}"
         else
             echo -e "${C_WARN}SELinux enabled but semanage unavailable, manual intervention needed if restart fails.${C_RST}"
@@ -454,7 +458,7 @@ fw_init() {
     local p; p=$(ssh_port_live)
     if [ "$FW_KIND" = "ufw" ]; then
         eval "$PKG_INSTALL ufw"
-        ufw allow $p/tcp
+        ufw allow "$p/tcp"
         ufw allow 80/tcp
         ufw allow 443/tcp
         echo "y" | ufw enable
@@ -462,7 +466,7 @@ fw_init() {
         eval "$PKG_INSTALL firewalld"
         systemctl enable firewalld
         systemctl start firewalld
-        firewall-cmd --permanent --add-port=$p/tcp
+        firewall-cmd --permanent --add-port="$p/tcp"
         firewall-cmd --permanent --add-port=80/tcp
         firewall-cmd --permanent --add-port=443/tcp
         firewall-cmd --reload
@@ -488,9 +492,9 @@ fw_open() {
     [[ "$port" != *"/"* ]] && port="$port/tcp"
     echo -e "${C_INFO}Allowing $port ...${C_RST}"
     if [ "$FW_KIND" = "ufw" ]; then
-        ufw allow $port
+        ufw allow "$port"
     else
-        firewall-cmd --permanent --add-port=$port
+        firewall-cmd --permanent --add-port="$port"
         firewall-cmd --reload
     fi
     echo -e "${C_OK}$port allowed.${C_RST}"
@@ -654,7 +658,7 @@ mem_swap_build() {
     fi
 
     echo -e "${C_INFO}Creating ${mb}MB swap file...${C_RST}"
-    fallocate -l ${mb}M /swapfile 2>/dev/null || dd if=/dev/zero of=/swapfile bs=1M count=$mb status=none
+    fallocate -l "${mb}M" /swapfile 2>/dev/null || dd if=/dev/zero of=/swapfile bs=1M count="$mb" status=none
     chmod 600 /swapfile
     mkswap /swapfile >/dev/null
     if ! swapon /swapfile; then
@@ -1323,7 +1327,7 @@ baseline_scan() {
 
     # Externally exposed ports
     local ports
-    ports=$(ss -tuln 2>/dev/null | grep LISTEN | grep -v '127.0.0.1\|\[::1\]' | wc -l)
+    ports=$(ss -tuln 2>/dev/null | grep LISTEN | grep -vc '127.0.0.1\|\[::1\]')
     if [ "$ports" -le 10 ]; then
         note_check "Exposed ports" PASS "$ports ports, manageable surface"
     elif [ "$ports" -le 20 ]; then
@@ -1497,7 +1501,8 @@ EOF
         echo -e "${C_OK}Effective: mirror and log rotation (50m x 3 per file) applied.${C_RST}"
     else
         echo -e "${C_FAIL}Docker restart failed, rolling back daemon.json...${C_RST}"
-        local bak; bak=$(ls -1t /etc/docker/daemon.json.orig-* 2>/dev/null | head -n 1)
+        local bak="" orig_f
+    for orig_f in /etc/docker/daemon.json.orig-*; do [ -e "$orig_f" ] && bak=$orig_f; done
         if [ -n "$bak" ]; then
             cp "$bak" /etc/docker/daemon.json
             systemctl restart docker
@@ -1522,8 +1527,10 @@ docker_ufw_takeover() {
         echo -e "${C_OK}Takeover already enabled.${C_RST}"
         if ask_yes "Revert takeover (restore Docker default iptables behavior)?"; then
             local bd bu
-            bd=$(ls -1t /etc/docker/daemon.json.orig-* 2>/dev/null | head -n 1)
-            bu=$(ls -1t /etc/ufw/before.rules.orig-* 2>/dev/null | head -n 1)
+            bd="" bu=""
+            local orig_f
+            for orig_f in /etc/docker/daemon.json.orig-*; do [ -e "$orig_f" ] && bd=$orig_f; done
+            for orig_f in /etc/ufw/before.rules.orig-*; do [ -e "$orig_f" ] && bu=$orig_f; done
             [ -n "$bd" ] && cp "$bd" /etc/docker/daemon.json
             [ -n "$bu" ] && cp "$bu" /etc/ufw/before.rules
             ufw reload >/dev/null 2>&1
@@ -1580,8 +1587,10 @@ PYEOF
     else
         echo -e "${C_FAIL}Docker restart failed, rolling back...${C_RST}"
         local bd bu
-        bd=$(ls -1t /etc/docker/daemon.json.orig-* 2>/dev/null | head -n 1)
-        bu=$(ls -1t /etc/ufw/before.rules.orig-* 2>/dev/null | head -n 1)
+        bd="" bu=""
+        local orig_f
+        for orig_f in /etc/docker/daemon.json.orig-*; do [ -e "$orig_f" ] && bd=$orig_f; done
+        for orig_f in /etc/ufw/before.rules.orig-*; do [ -e "$orig_f" ] && bu=$orig_f; done
         [ -n "$bd" ] && cp "$bd" /etc/docker/daemon.json
         [ -n "$bu" ] && cp "$bu" /etc/ufw/before.rules
         ufw reload >/dev/null 2>&1
@@ -2393,11 +2402,11 @@ emergency_cron() {
     cat /etc/crontab 2>/dev/null || echo -e "${C_WARN}No /etc/crontab${C_RST}"
     echo ""
     echo -e "${C_INFO}── All user crontabs ──${C_RST}"
-    for user in $(cut -d: -f1 /etc/passwd 2>/dev/null); do
+    while IFS= read -r user; do
         local cron
         cron=$(crontab -u "$user" -l 2>/dev/null) || continue
         [ -n "$cron" ] && echo -e "${C_WARN}$user:${C_RST}" && echo "$cron"
-    done
+    done < <(cut -d: -f1 /etc/passwd 2>/dev/null)
     echo ""
     echo -e "${C_WARN}Check for: unknown script paths, suspicious download commands, non-standard schedule tasks${C_RST}"
     wait_key
@@ -3204,7 +3213,7 @@ home_page() {
         echo
         local pick
         read -r -p "❯ " pick
-        pick=$(echo "$pick" | tr 'A-Z' 'a-z')
+        pick=$(echo "$pick" | tr '[:upper:]' '[:lower:]')
         case $pick in
             a1)
                 echo -e "${C_WARN}Full init will adjust firewall and kernel parameters.${C_RST}"

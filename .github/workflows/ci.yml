@@ -20,7 +20,7 @@ jobs:
           echo "bash -n: all scripts pass"
 
   shellcheck:
-    name: shellcheck (warning gate)
+    name: shellcheck (strict style gate)
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -29,13 +29,8 @@ jobs:
       - name: Run shellcheck gate
         run: |
           shellcheck --version
-          find . -name '*.sh' -not -path './.git/*' -print0 | xargs -0 -n1 shellcheck -S warning
-          echo "shellcheck gate: no error or warning level findings"
-
-      - name: Full shellcheck report (informational)
-        run: |
-          find . -name '*.sh' -not -path './.git/*' -print0 | xargs -0 -n1 shellcheck -S style || true
-          echo "Full report above is informational; the strict style gate lands with the shellcheck-zero iteration"
+          find . -name '*.sh' -not -path './.git/*' -print0 | xargs -0 -n1 shellcheck -S style
+          echo "shellcheck gate: zero findings at style severity (strict mode since iter/l18)"
 
   secret-scan:
     name: gitleaks secret scan

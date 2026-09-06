@@ -1,4 +1,5 @@
 #!/bin/bash
+# shellcheck disable=SC2006  # Caddyfile heredoc uses escaped Caddy backtick strings; not shell substitution
 # ════════════════════════════════════════════════════════════
 #  waf_setup.sh — Web Application Firewall (Coraza + OWASP CRS v4)
 #  Supported OS: Linux host

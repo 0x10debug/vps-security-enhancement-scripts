@@ -182,6 +182,7 @@ section_daemon_config() {
     run_check "1.9" "Ensure live restore is enabled" \
         bash -c 'get_docker_info | grep -q "Live Restore Enabled: true" && echo "live restore enabled" && return 0 || echo "live restore not enabled" && return 1'
 
+# shellcheck disable=SC2016 # inner-shell expansion
     run_check "1.10" "Ensure Content trust for Docker is enabled" \
         bash -c 'get_docker_info 2>/dev/null | grep -qi "content trust" && return 0 || { [ -n "${DOCKER_CONTENT_TRUST:-}" ] && [ "$DOCKER_CONTENT_TRUST" = "1" ] && echo "DOCKER_CONTENT_TRUST=1" && return 0; } || echo "content trust not enabled" && return 1'
 
@@ -203,9 +204,11 @@ section_daemon_files() {
     run_check "2.2" "Ensure permissions on /etc/docker/ directory are 755 or more restrictive" \
         bash -c 'check_file_perm /etc/docker 755'
 
+# shellcheck disable=SC2016 # inner-shell expansion
     run_check "2.3" "Ensure permissions on docker.socket are configured" \
         bash -c 'f=$(systemctl show docker.socket -p FragmentPath 2>/dev/null | cut -d= -f2); [ -n "$f" ] && [ -f "$f" ] && check_file_perm "$f" 644 || echo "docker.socket not found via systemd" && return 2'
 
+# shellcheck disable=SC2016 # inner-shell expansion
     run_check "2.4" "Ensure permissions on docker.service are configured" \
         bash -c 'f=$(systemctl show docker.service -p FragmentPath 2>/dev/null | cut -d= -f2); [ -n "$f" ] && [ -f "$f" ] && check_file_perm "$f" 644 || echo "docker.service not found via systemd" && return 2'
 
@@ -221,9 +224,11 @@ section_container_images() {
     echo ""
     echo "━━━ 3.x Container Images ━━━"
 
+# shellcheck disable=SC2016 # inner-shell expansion
     run_check "3.1" "Ensure no :latest tag images are in use" \
         bash -c 'n=$(docker ps --format "{{.Image}}" 2>/dev/null | grep -c ":latest" || true); [ "$n" -eq 0 ] && echo "no :latest tags in running containers" && return 0 || echo "$n containers using :latest" && return 1'
 
+# shellcheck disable=SC2016 # inner-shell expansion
     run_check "3.2" "Ensure specific image tags are used (not floating)" \
         bash -c 'n=$(docker ps --format "{{.Image}}" 2>/dev/null | grep -vE ":[a-zA-Z0-9._-]+$" | grep -vE ":[0-9]+\.[0-9]+\.[0-9]+" | wc -l || true); [ "$n" -eq 0 ] && echo "all images have specific tags" && return 0 || echo "$n images may have floating tags" && return 2'
 
@@ -247,48 +252,63 @@ section_container_runtime() {
 
     # Get running containers (used implicitly via docker ps in checks below)
 
+# shellcheck disable=SC2016 # inner-shell expansion
     run_check "4.1" "Ensure --privileged mode is not used" \
         bash -c 'n=$(docker inspect --format "{{.HostConfig.Privileged}}" $(docker ps -q '"$container_filter"' 2>/dev/null) 2>/dev/null | grep -c "true" || true); [ "$n" -eq 0 ] && echo "no privileged containers" && return 0 || echo "$n privileged containers" && return 1'
 
+# shellcheck disable=SC2016 # inner-shell expansion
     run_check "4.2" "Ensure --cap-add is not used to add dangerous capabilities" \
         bash -c 'n=0; for c in $(docker ps -q '"$container_filter"' 2>/dev/null); do caps=$(docker inspect --format "{{.HostConfig.CapAdd}}" "$c" 2>/dev/null); echo "$caps" | grep -qiE "SYS_ADMIN|SYS_MODULE|SYS_PTRACE|NET_ADMIN|DAC_READ_SEARCH" && n=$((n+1)); done; [ "$n" -eq 0 ] && echo "no dangerous caps added" && return 0 || echo "$n containers with dangerous caps" && return 1'
 
+# shellcheck disable=SC2016 # inner-shell expansion
     run_check "4.3" "Ensure containers do not share host PID namespace" \
         bash -c 'n=$(docker inspect --format "{{.HostConfig.PidMode}}" $(docker ps -q '"$container_filter"' 2>/dev/null) 2>/dev/null | grep -c "host" || true); [ "$n" -eq 0 ] && echo "no host PID namespace sharing" && return 0 || echo "$n containers sharing host PID" && return 1'
 
+# shellcheck disable=SC2016 # inner-shell expansion
     run_check "4.4" "Ensure containers do not share host IPC namespace" \
         bash -c 'n=$(docker inspect --format "{{.HostConfig.IpcMode}}" $(docker ps -q '"$container_filter"' 2>/dev/null) 2>/dev/null | grep -c "host" || true); [ "$n" -eq 0 ] && echo "no host IPC namespace sharing" && return 0 || echo "$n containers sharing host IPC" && return 1'
 
+# shellcheck disable=SC2016 # inner-shell expansion
     run_check "4.5" "Ensure containers do not share host UTS namespace" \
         bash -c 'n=$(docker inspect --format "{{.HostConfig.UTSMode}}" $(docker ps -q '"$container_filter"' 2>/dev/null) 2>/dev/null | grep -c "host" || true); [ "$n" -eq 0 ] && echo "no host UTS namespace sharing" && return 0 || echo "$n containers sharing host UTS" && return 1'
 
+# shellcheck disable=SC2016 # inner-shell expansion
     run_check "4.6" "Ensure containers do not share host network namespace" \
         bash -c 'n=$(docker inspect --format "{{.HostConfig.NetworkMode}}" $(docker ps -q '"$container_filter"' 2>/dev/null) 2>/dev/null | grep -c "host" || true); [ "$n" -eq 0 ] && echo "no host network namespace sharing" && return 0 || echo "$n containers sharing host network" && return 1'
 
+# shellcheck disable=SC2016 # inner-shell expansion
     run_check "4.7" "Ensure containers do not share host user namespace" \
         bash -c 'n=$(docker inspect --format "{{.HostConfig.UsernsMode}}" $(docker ps -q '"$container_filter"' 2>/dev/null) 2>/dev/null | grep -c "host" || true); [ "$n" -eq 0 ] && echo "no host user namespace sharing" && return 0 || echo "$n containers sharing host userns" && return 1'
 
+# shellcheck disable=SC2016 # inner-shell expansion
     run_check "4.8" "Ensure containers do not run as root user" \
         bash -c 'n=0; for c in $(docker ps -q '"$container_filter"' 2>/dev/null); do user=$(docker inspect --format "{{.Config.User}}" "$c" 2>/dev/null); [ -z "$user" ] || [ "$user" = "root" ] || [ "$user" = "0" ] && n=$((n+1)); done; [ "$n" -eq 0 ] && echo "no root-running containers" && return 0 || echo "$n containers running as root" && return 1'
 
+# shellcheck disable=SC2016 # inner-shell expansion
     run_check "4.9" "Ensure containers do not mount Docker socket" \
         bash -c 'n=0; for c in $(docker ps -q '"$container_filter"' 2>/dev/null); do docker inspect --format "{{range .Mounts}}{{.Source}}{{end}}" "$c" 2>/dev/null | grep -q "docker.sock" && n=$((n+1)); done; [ "$n" -eq 0 ] && echo "no docker.sock mounts" && return 0 || echo "$n containers mounting docker.sock" && return 1'
 
+# shellcheck disable=SC2016 # inner-shell expansion
     run_check "4.10" "Ensure containers do not mount sensitive host directories" \
         bash -c 'n=0; for c in $(docker ps -q '"$container_filter"' 2>/dev/null); do docker inspect --format "{{range .Mounts}}{{.Source}}:{{.Destination}} {{end}}" "$c" 2>/dev/null | grep -qE "/etc | /root | /var/lib/docker | /proc | /sys " && n=$((n+1)); done; [ "$n" -eq 0 ] && echo "no sensitive host mounts" && return 0 || echo "$n containers with sensitive mounts" && return 1'
 
+# shellcheck disable=SC2016 # inner-shell expansion
     run_check "4.11" "Ensure container memory limit is set" \
         bash -c 'n=0; for c in $(docker ps -q '"$container_filter"' 2>/dev/null); do mem=$(docker inspect --format "{{.HostConfig.Memory}}" "$c" 2>/dev/null); [ "$mem" = "0" ] || [ -z "$mem" ] && n=$((n+1)); done; [ "$n" -eq 0 ] && echo "all containers have memory limits" && return 0 || echo "$n containers without memory limits" && return 1'
 
+# shellcheck disable=SC2016 # inner-shell expansion
     run_check "4.12" "Ensure container CPU priority is set" \
         bash -c 'n=0; for c in $(docker ps -q '"$container_filter"' 2>/dev/null); do cpu=$(docker inspect --format "{{.HostConfig.CpuShares}}" "$c" 2>/dev/null); [ "$cpu" = "0" ] || [ -z "$cpu" ] && n=$((n+1)); done; [ "$n" -eq 0 ] && echo "all containers have CPU shares" && return 0 || echo "$n containers without CPU shares" && return 2'
 
+# shellcheck disable=SC2016 # inner-shell expansion
     run_check "4.13" "Ensure container read-only root filesystem is used" \
         bash -c 'n=0; for c in $(docker ps -q '"$container_filter"' 2>/dev/null); do ro=$(docker inspect --format "{{.HostConfig.ReadonlyRootfs}}" "$c" 2>/dev/null); [ "$ro" = "false" ] || [ -z "$ro" ] && n=$((n+1)); done; [ "$n" -eq 0 ] && echo "all containers have read-only rootfs" && return 0 || echo "$n containers without read-only rootfs" && return 2'
 
+# shellcheck disable=SC2016 # inner-shell expansion
     run_check "4.14" "Ensure container restart policy is not always" \
         bash -c 'n=$(docker inspect --format "{{.HostConfig.RestartPolicy.Name}}" $(docker ps -q '"$container_filter"' 2>/dev/null) 2>/dev/null | grep -c "always" || true); [ "$n" -eq 0 ] && echo "no always restart policy" && return 0 || echo "$n containers with always restart" && return 2'
 
+# shellcheck disable=SC2016 # inner-shell expansion
     run_check "4.15" "Ensure HEALTHCHECK is configured for containers" \
         bash -c 'n=0; for c in $(docker ps -q '"$container_filter"' 2>/dev/null); do hc=$(docker inspect --format "{{.Config.Healthcheck.Test}}" "$c" 2>/dev/null); [ -z "$hc" ] || [ "$hc" = "<nil>" ] && n=$((n+1)); done; [ "$n" -eq 0 ] && echo "all containers have healthcheck" && return 0 || echo "$n containers without healthcheck" && return 1'
 }
@@ -298,21 +318,27 @@ section_security_ops() {
     echo ""
     echo "━━━ 5.x Docker Security Operations ━━━"
 
+# shellcheck disable=SC2016 # inner-shell expansion
     run_check "5.1" "Ensure AppArmor or SELinux profile is applied to containers" \
         bash -c 'n=0; for c in $(docker ps -q 2>/dev/null); do aa=$(docker inspect --format "{{.AppArmorProfile}}" "$c" 2>/dev/null); [ -z "$aa" ] || [ "$aa" = "<no value>" ] && n=$((n+1)); done; [ "$n" -eq 0 ] && echo "all containers have AppArmor/SELinux" && return 0 || echo "$n containers without MAC profile" && return 1'
 
+# shellcheck disable=SC2016 # inner-shell expansion
     run_check "5.2" "Ensure seccomp profile is applied to containers" \
         bash -c 'n=$(docker inspect --format "{{.HostConfig.SecurityOpt}}" $(docker ps -q 2>/dev/null) 2>/dev/null | grep -c "seccomp:unconfined" || true); [ "$n" -eq 0 ] && echo "no unconfined seccomp" && return 0 || echo "$n containers with unconfined seccomp" && return 1'
 
+# shellcheck disable=SC2016 # inner-shell expansion
     run_check "5.3" "Ensure cgroup usage is restricted" \
         bash -c 'n=0; for c in $(docker ps -q 2>/dev/null); do cg=$(docker inspect --format "{{.HostConfig.CgroupParent}}" "$c" 2>/dev/null); [ -n "$cg" ] && [ "$cg" != "" ] && n=$((n+1)); done; echo "$n containers with custom cgroup parent" && return 2'
 
+# shellcheck disable=SC2016 # inner-shell expansion
     run_check "5.4" "Ensure container PID cgroup is limited" \
         bash -c 'n=0; for c in $(docker ps -q 2>/dev/null); do pids=$(docker inspect --format "{{.HostConfig.PidsLimit}}" "$c" 2>/dev/null); [ "$pids" = "0" ] || [ -z "$pids" ] && n=$((n+1)); done; [ "$n" -eq 0 ] && echo "all containers have PID limits" && return 0 || echo "$n containers without PID limits" && return 2'
 
+# shellcheck disable=SC2016 # inner-shell expansion
     run_check "5.5" "Ensure Docker's secret management is used" \
         bash -c 'docker secret ls 2>/dev/null | grep -q . && echo "secrets in use" && return 0 || echo "no Docker secrets (may use other secret mgmt)" && return 2'
 
+# shellcheck disable=SC2016 # inner-shell expansion
     run_check "5.6" "Ensure docker-compose network exposure is minimal" \
         bash -c 'n=$(docker network ls --filter driver=bridge -q 2>/dev/null | wc -l); echo "$n bridge networks" && return 2'
 
@@ -325,6 +351,7 @@ section_network() {
     echo ""
     echo "━━━ 6.x Docker Network Configuration ━━━"
 
+# shellcheck disable=SC2016 # inner-shell expansion
     run_check "6.1" "Ensure default bridge network is not used for containers" \
         bash -c 'n=$(docker ps --format "{{.Networks}}" 2>/dev/null | grep -c "bridge" || true); echo "$n containers on default bridge" && return 2'
 

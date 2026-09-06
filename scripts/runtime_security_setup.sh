@@ -605,9 +605,11 @@ audit_runtime_security() {
         local falco_events
         falco_events=$(tail -5 /var/log/falco/events.log 2>/dev/null || echo "Cannot read")
         echo "$falco_events"
-        echo "" >> "$report"
-        echo "Recent Falco events:" >> "$report"
-        echo "$falco_events" >> "$report"
+        {
+            echo ""
+            echo "Recent Falco events:"
+            echo "$falco_events"
+        } >> "$report"
     fi
 
     # Container runtime security
