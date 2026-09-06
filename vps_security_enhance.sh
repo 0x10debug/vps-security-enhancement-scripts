@@ -1783,7 +1783,7 @@ sys_pulse() {
     disk_p=$(df / | tail -1 | awk '{print $5}' | sed 's/%//')
     gauge "Disk" "$disk_p"
     echo ""
-    echo -e "${C_OK}▸ Load Average: $(cat /proc/loadavg | awk '{print $1" / "$2" / "$3}')${C_RST}"
+    echo -e "${C_OK}▸ Load Average: $(awk '{print $1" / "$2" / "$3}' /proc/loadavg)${C_RST}"
     echo ""
     echo -e "${C_OK}▸ Network Interfaces:${C_RST}"
     if command -v ip >/dev/null; then

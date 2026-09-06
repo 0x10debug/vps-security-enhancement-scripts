@@ -1,0 +1,34 @@
+name: Feature request
+description: Propose a new hardening script, check, or handbook chapter
+labels: ["enhancement"]
+body:
+  - type: dropdown
+    id: kind
+    attributes:
+      label: Kind
+      options:
+        - New hardening capability
+        - Improvement to an existing script
+        - New handbook chapter or cheatsheet
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem or gap
+      description: What can an operator not do, or not verify, today?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed behavior
+      description: What should the script check or change, and how would the operator verify it worked?
+    validations:
+      required: true
+  - type: textarea
+    id: references
+    attributes:
+      label: References
+      description: Benchmark control IDs, vendor docs, or advisories that motivate this.

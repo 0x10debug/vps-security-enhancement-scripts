@@ -1,0 +1,53 @@
+name: Bug report
+description: A script, check, or handbook item behaves incorrectly
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Redact credentials, production IPs, and forensic output before
+        submitting. Reports of checks that weaken a system are treated with
+        priority.
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Main script (vps_security_enhance.sh)
+        - A script under scripts/
+        - Handbook / cheatsheet content
+        - CI or repository tooling
+    validations:
+      required: true
+  - type: input
+    id: script
+    attributes:
+      label: Script or chapter
+      description: e.g. scripts/cis_benchmark_audit.sh or handbook/03-incident-response.md
+    validations:
+      required: true
+  - type: input
+    id: os
+    attributes:
+      label: Distribution and version
+      placeholder: Ubuntu 22.04
+    validations:
+      required: true
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened, expected vs actual
+      description: Include the exact command or menu path and the relevant output.
+    validations:
+      required: true
+  - type: checkboxes
+    id: impact
+    attributes:
+      label: Impact
+      options:
+        - label: Wrong check result (false pass)
+        - label: Wrong check result (false fail)
+        - label: Unexpected system change
+        - label: Cosmetic / documentation only
+    validations:
+      required: true
