@@ -37,6 +37,23 @@ jobs:
           find . -name '*.sh' -not -path './.git/*' -print0 | xargs -0 -n1 shellcheck -S style
           echo "shellcheck gate: zero findings at style severity (strict mode since iter/l18, pinned v0.11.0)"
 
+  test-suite:
+    name: repository test suite
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install pinned shellcheck (match local toolchain exactly)
+        run: |
+          curl -fsSL https://github.com/koalaman/shellcheck/releases/download/v0.11.0/shellcheck-v0.11.0.linux.x86_64.tar.xz -o /tmp/shellcheck.tar.xz
+          sudo tar -xf /tmp/shellcheck.tar.xz -C /usr/local --strip-components=1
+
+      - name: Run tests/run-tests.sh --ci
+        run: tests/run-tests.sh --ci
+
   secret-scan:
     name: gitleaks secret scan
     runs-on: ubuntu-latest

@@ -15,6 +15,28 @@ C_RST='\033[0m'
 APP_VER="v2.0.0"
 UPSTREAM_URL="https://raw.githubusercontent.com/0x10debug/vps-security-enhancement-scripts/main/vps_security_enhance.sh"
 
+# ── [base] Usage before privilege gate: printing help must not require root ─
+case "${1:-}" in
+    -h|--help)
+        cat <<USAGE
+secure-vps ${APP_VER} - VPS Security Enhancement Scripts
+
+Usage: bash vps_security_enhance.sh        (interactive menu; run as root)
+
+An interactive, scenario-driven hardening suite covering first-login security,
+system baseline, CrowdSec, container/K8s/cloud/database/big-data audits, TLS,
+secret scanning, WAF, and incident triage. See the handbook/ directory and
+README.md for the full script-vs-module comparison.
+
+Options:
+  -h, --help    Show this help and exit
+
+Report issues: https://github.com/0x10debug/vps-security-enhancement-scripts/issues
+USAGE
+        exit 0
+        ;;
+esac
+
 # ── [base] Environment detection ──────────────────────────────────────
 if [ "$EUID" -ne 0 ]; then
     echo -e "${C_FAIL}Insufficient privileges: please run as root.${C_RST}"
